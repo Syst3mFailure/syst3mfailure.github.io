@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Syst3m Failure - Articles</title>
+    <description>Cybersecurity research, CTFs and more</description>
+    <link>
+    https://syst3mfailure.io</link>
+    
+      
+      <item>
+        <title>[CVE-2021-3156] Exploiting Sudo heap overflow on Debian 10</title>
+        
+          <description>&lt;p&gt;Recently the &lt;a href=&quot;https://www.qualys.com/&quot;&gt;Qualys Research Team&lt;/a&gt; did an amazing job discovering a &lt;a href=&quot;https://blog.qualys.com/vulnerabilities-research/2021/01/26/cve-2021-3156-heap-based-buffer-overflow-in-sudo-baron-samedit&quot;&gt;Heap overflow vulnerability in Sudo&lt;/a&gt;. In the next sections, we will analyze the bug and we will write an exploit to gain root privileges on Debain 10.&lt;/p&gt;
+
+</description>
+        
+        <pubDate>Mon, 08 Feb 2021 08:00:00 +0100</pubDate>
+        <link>
+        https://syst3mfailure.io/sudo-heap-overflow</link>
+        <guid isPermaLink="true">https://syst3mfailure.io/sudo-heap-overflow</guid>
+      </item>
+      
+    
+      
+      <item>
+        <title>[CUCTF 2020] Kernel Exploitation: Hotrod</title>
+        
+          <description>&lt;p&gt;Hotrod is a kernel exploitation challenge created by my friend &lt;a href=&quot;https://www.willsroot.io/&quot;&gt;FizzBuzz101&lt;/a&gt; for CUCTF 2020. I tested the challenge before release and since the exploitation process was really interesting, I decided to write this article. In the next sections we will see how to get a root shell exploiting a UAF, using a single allocation, a timerfd_ctx structure and userfaultfd. Let’s start!&lt;/p&gt;
+
+</description>
+        
+        <pubDate>Mon, 19 Oct 2020 09:00:00 +0200</pubDate>
+        <link>
+        https://syst3mfailure.io/hotrod</link>
+        <guid isPermaLink="true">https://syst3mfailure.io/hotrod</guid>
+      </item>
+      
+    
+      
+      <item>
+        <title>Ret2dl_resolve x64</title>
+        
+          <description>&lt;p&gt;In this article, we will start analyzing the lazy binding process, we will proceed dissecting dl-runtime, understanding when is possible to use this technique without a leak, and finally we will build our exploit.&lt;/p&gt;
+
+</description>
+        
+        <pubDate>Tue, 12 May 2020 09:00:00 +0200</pubDate>
+        <link>
+        https://syst3mfailure.io/ret2dl_resolve</link>
+        <guid isPermaLink="true">https://syst3mfailure.io/ret2dl_resolve</guid>
+      </item>
+      
+    
+  </channel>
+</rss>

